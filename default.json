@@ -1,0 +1,78 @@
+{
+    "ansible": {
+        "enabled": true,
+        "repo_url": "",
+        "repo_path": ""
+    },
+
+    "ssh_bastion": {
+        "enabled": true,
+        "user": "",
+        "host": ""
+    },
+
+    "vault": {
+        "enabled": true,
+        "addr": "",
+        "version": "1.10.3",
+        "download_url": "https://hashicorp-releases.yandexcloud.net/vault/{ver}/vault_{ver}_{os}_{arch}.zip"
+    },
+
+    "terraform": {
+        "enabled": true,
+        "version": "1.2.8",
+        "download_url": "https://hashicorp-releases.yandexcloud.net/terraform/{ver}/terraform_{ver}_{os}_{arch}.zip",
+        "use_proxy": false
+    },
+
+    "terragrunt": {
+        "enabled": true,
+        "download_url": "https://github.com/gruntwork-io/terragrunt/releases/download/v{ver}/terragrunt_{os}_{arch}",
+        "version": "0.38.9"
+
+    },
+
+    "gcloud": {
+        "enabled": true,
+        "download_url": "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-{ver}-{os}-{arch}.tar.gz",
+        "version": "400.0.0"
+
+    },
+
+    "k9s": {
+        "enabled": true,
+        "download_url": "https://github.com/derailed/k9s/releases/download/v{ver}/k9s_{os}_{arch}.tar.gz",
+        "version": "0.26.3"
+
+    },
+    "kubectl": {
+        "enabled": true,
+        "download_url": "https://storage.googleapis.com/kubernetes-release/release/v{ver}/bin/{os}/{arch}/kubectl",
+        "version": "1.25.0"
+
+    },
+    "gron": {
+        "enabled": true,
+        "repo_url": "git@gitlab.zxz.su:/dit/tools/gron"
+
+    },
+    "helm": {
+        "enabled": true,
+        "download_url": "https://get.helm.sh/helm-v{ver}-{os}-{arch}.tar.gz",
+        "version": "3.10.1"
+
+    },
+    "argocd": {
+        "enabled": true,
+        "download_url": "https://github.com/argoproj/argo-cd/releases/download/v{ver}/argocd-{os}-{arch}",
+        "version": "2.5.0"
+    },
+
+
+    "http_proxy": {
+        "enabled": false,
+        "http_addr": "",
+        "https_addr": "",
+    }
+}
+
