@@ -7,24 +7,52 @@ from pathlib import Path
 from common.logger import logger
 from common.config import get_config
 from common.download_file import download_file
+from installers.installer import Installer
 
 
-class Gcloud:
+class Gcloud(Installer):
 
-    def __init__(self, workdir):
-        self.config = get_config()
-        self.workdir = workdir
-        self.workdir_gcloud = workdir.root / 'gcloud/'
-        self.desired_platform = self.config.platform
-        self.desired_ver = self.config.gcloud_ver
-        self.download_url = self.config.gcloud_url
-        self.bin_path = workdir.bin / 'gcloud'
+    def __init__(self):
+        self._config = get_config()
+        self.enabled = self._config.gcloud_enabled
+        self.workdir = self._config.workdir
+        self.workdir_gcloud = self.workdir.root / 'gcloud/'
+        self.desired_platform = self._config.platform
+        self.desired_ver = self._config.gcloud_ver
+        self.download_url = self._config.gcloud_url
+        self.bin_path = self.workdir.bin / 'gcloud'
+        self.cfg_path = self.workdir_gcloud / 'cfg'
+        self.version = self._config.gcloud_ver
+        self.url = self._config.gcloud_url
 
+    def install(self):
+        logger.info('Install gcloud ...')
         self._prepare()
+        current_version = self._check_current_ver()
+        if current_version == self.desired_ver:
+            logger.info('Gcloud already installed')
+        else:
+            self._download()
+            logger.info("Gcloud installed")
+        self._install_components()
+        logger.info("Gcloud components installed")
+        self._prepare_config()
+
+
+    def make_activate_replaces(self) -> dict:
+        replaces = {
+            "<GCLOUD_ENABLED>": str(self.enabled),
+            "<GCLOUD_CFG_PATH>": str(self.cfg_path),
+        }
+        if self.enabled:
+            replaces['<GCLOUD_ENABLED>'] = "true"
+        else:
+            replaces['<GCLOUD_ENABLED>'] = ""
+        return replaces
 
     def _prepare(self):
         self.workdir_gcloud.mkdir(exist_ok=True)
-        self.config.gcloud_cfg_path.mkdir(exist_ok=True)
+        self.cfg_path.mkdir(exist_ok=True)
 
     def _check_current_ver(self):
         if not os.path.exists(self.bin_path):
@@ -61,7 +89,7 @@ class Gcloud:
         zip_arch = self.workdir.tmp / 'gcloud.zip'
 
         logger.debug('Download gcloud {} -> {}'.format(url, zip_arch))
-        if not download_file(url, zip_arch, self.config.proxies):
+        if not download_file(url, zip_arch, self._config.proxies):
             sys.exit(1)
 
         # Remove old version
@@ -120,7 +148,7 @@ class Gcloud:
                 sys.exit(1)
 
     def _exec(self, cmd):
-        os.environ['CLOUDSDK_CONFIG'] = str(self.config.gcloud_cfg_path)
+        os.environ['CLOUDSDK_CONFIG'] = str(self.cfg_path)
         try:
             p = subprocess.run(
                 [self.bin_path,] + cmd,
@@ -136,7 +164,7 @@ class Gcloud:
             sys.exit(1)
 
     def _prepare_config(self):
-        proxy = self.config.proxies['http']
+        proxy = self._config.proxies['http']
         if proxy:
             proxy = proxy.replace('http://', '')
             addr = proxy
@@ -148,16 +176,3 @@ class Gcloud:
             self._exec(['config', 'set', 'proxy/port', port])
         else:
             logger.warning('No http proxy for gcloud')
-
-
-    def install(self):
-        logger.info('Install gcloud ...')
-        current_version = self._check_current_ver()
-        if current_version == self.desired_ver:
-            logger.info('Gcloud already installed')
-        else:
-            self._download()
-            logger.info("Gcloud installed")
-        self._install_components()
-        logger.info("Gcloud components installed")
-        self._prepare_config()

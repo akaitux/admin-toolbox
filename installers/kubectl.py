@@ -6,17 +6,36 @@ import traceback
 from common.logger import logger
 from common.config import get_config
 from common.download_file import download_file
+from installers.installer import Installer
 
 
-class Kubectl:
+class Kubectl(Installer):
 
-    def __init__(self, workdir):
-        self.config = get_config()
-        self.workdir = workdir
-        self.desired_platform = self.config.platform
-        self.desired_ver = self.config.kubectl_ver
-        self.download_url = self.config.kubectl_url
+    def __init__(self):
+        self._config = get_config()
+        self.enabled = self._config.kubectl_enabled
+        self.workdir = self._config.workdir
+        self.desired_platform = self._config.platform
+        self.desired_ver = self._config.kubectl_ver
+        self.download_url = self._config.kubectl_url
         self.bin_path = self.workdir.bin / 'kubectl'
+        self.config_path = self.workdir.root / 'kube'
+
+    def install(self):
+        logger.info('Install kubectl ...')
+        self.config_path.mkdir(exist_ok=True)
+        current_version = self._check_current_ver()
+        if current_version == self.desired_ver:
+            logger.info('kubectl already installed')
+            return
+        self._download()
+        logger.info("kubectl installed")
+
+    def make_activate_replaces(self) -> dict:
+        return {
+            "<KUBE_ENABLED>": str(self.enabled),
+            "<KUBE_CONFIG_PATH>": str(self.config_path),
+        }
 
     def _check_current_ver(self):
         if not os.path.exists(self.bin_path):
@@ -54,19 +73,9 @@ class Kubectl:
             arch="amd64",
         )
         logger.debug('Download kubectl {} -> {}'.format(url, self.bin_path))
-        if not download_file(url, self.bin_path, self.config.proxies):
+        if not download_file(url, self.bin_path, self._config.proxies):
             sys.exit(1)
         os.chmod(self.bin_path, 0o550)
-
-    def install(self):
-        logger.info('Install kubectl ...')
-        self.config.kube_config_path.mkdir(exist_ok=True)
-        current_version = self._check_current_ver()
-        if current_version == self.desired_ver:
-            logger.info('kubectl already installed')
-            return
-        self._download()
-        logger.info("kubectl installed")
 
 
 

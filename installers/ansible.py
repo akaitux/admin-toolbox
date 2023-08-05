@@ -6,26 +6,48 @@ from pathlib import Path
 from common.logger import logger
 from common.config import get_config
 from installers.python_venv import PythonVenv
+from installers.installer import Installer
+from installers.ssh import SSH
 
 
-class Ansible:
+class Ansible(Installer):
 
     def __init__(self):
-        self.config = get_config()
-        self.workdir = self.config.workdir
-        self.enabled = self.config.ansible_enabled
-        self.repo: Path = Path(self.config.ansible_repo_path)
-        self.version = self.config.ansible_version
-        self.repo_url = self.config.ansible_repo_url
+        self._config = get_config()
+        self.workdir = self._config.workdir
+        self.enabled = self._config.ansible_enabled
+        self.repo: Path = Path(self._config.ansible_repo_path)
+        self.version = self._config.ansible_version
+        self.repo_url = self._config.ansible_repo_url
         self.workdir_ansible = self.workdir.root / 'ansible/'
         self.workdir_root_bin = self.workdir.bin
         self.venv = self.workdir_ansible / 'venv/'
-        self.cfg_path = self.config.ansible_cfg_path
-        self.repo_cfg_path = self.config.ansible_repo_cfg_path
+        self.cfg_path = self._config.ansible_cfg_path
+        self.repo_cfg_path = self._config.ansible_repo_cfg_path
         self.activate_path = self.workdir.root / "activate"
         self.python = PythonVenv()
         self._prepare_dirs()
 
+    def install(self):
+        self._create_venv()
+        self._clone_repo()
+        self._install_venv_requirements()
+        self._setup_ansible_cfg()
+        self._create_bin_links()
+        #self._delete_repo()
+
+    def make_activate_replaces(self) -> dict:
+        replaces = {
+            "<ANSIBLE_PATH>": str(self.repo),
+            "<ANSIBLE_CONFIG>": str(self.cfg_path),
+            "<ANSIBLE_WORKDIR>": str(self.workdir_ansible),
+            "<ANSIBLE_BINDIR>":  str(self.workdir_root_bin / 'ansible'),
+        }
+        if not self.enabled:
+            replaces["<ANSIBLE_ENABLED>"] = ""
+        else:
+            replaces["<ANSIBLE_ENABLED>"] = "true"
+        return replaces
 
     def _prepare_dirs(self):
         self.workdir_ansible.mkdir(exist_ok=True)
@@ -147,13 +169,15 @@ class Ansible:
         if os.path.exists(self.repo_cfg_path):
             default_src_cfg = self.repo_cfg_path
         else:
-            default_src_cfg = self.config.toolbox_repo_dir / 'ansible.cfg'
+            default_src_cfg = self._config.toolbox_repo_dir / 'ansible.cfg'
         print("Ansible source cfg: {}".format(default_src_cfg))
 
-        tmp_src_cfg_path = self.config.workdir.root / "_tmp_ansible.cfg"
+        tmp_src_cfg_path = self._config.workdir.root / "_tmp_ansible.cfg"
         shutil.copyfile(default_src_cfg, tmp_src_cfg_path)
 
-        if self.config.ssh_bastion_enabled:
+        ssh = SSH()
+
+        if ssh.enabled:
             is_ssh_connection_exists = False
             with open(tmp_src_cfg_path, 'r') as f:
                 cfg = f.read()
@@ -166,7 +190,7 @@ class Ansible:
 
             if not is_ssh_connection_exists:
                 ssh_conf = "[ssh_connection]\n"
-                ssh_conf += "ssh_args = -F {}\n".format(self.config.ssh_bastion_config)
+                ssh_conf += "ssh_args = -F {}\n".format(ssh.config_path)
                 with open(tmp_src_cfg_path, 'a') as f:
                     f.write(ssh_conf)
 
@@ -196,14 +220,5 @@ class Ansible:
         else:
             logger.info("Skip ansble.cfg")
 
-    def install(self):
-        logger.info('Install ansible ...')
-        self._create_venv()
-        self._clone_repo()
-        self._install_venv_requirements()
-        self._setup_ansible_cfg()
-        self._create_bin_links()
-        logger.info("Ansible installed")
-        #self._delete_repo()
 
 

@@ -5,20 +5,37 @@ import sys
 from pathlib import Path
 from common.logger import logger
 from common.config import get_config
+from installers.installer import Installer
 
 
-class Gron:
+class Gron(Installer):
 
-    def __init__(self, workdir):
-        self.config = get_config()
-        self.repo_url = self.config.gron_repo_url
-        self.workdir = workdir
-        self.workdir_gron = workdir.root / 'gron/'
-        self.workdir_root_bin = workdir.bin
+    def __init__(self):
+        self._config = get_config()
+        self.enabled = self._config.gron_enabled
+        self.repo_url = self._config.gron_repo_url
+        self.workdir = self._config.workdir
+        self.workdir_gron = self.workdir.root / 'gron/'
+        self.workdir_root_bin = self.workdir.bin
         self.venv = self.workdir_gron / 'venv/'
         self.repo = self.workdir_gron / 'repo/'
         self.gron_cfg_path = self.workdir_gron / 'gron.yml'
+
+    def install(self):
+        logger.info('Install gron ...')
         self._prepare_dirs()
+        self._create_venv()
+        self._clone_repo()
+        self._install_venv_requirements()
+        self._setup_gron_cfg()
+        self._create_bin()
+        logger.info("Gron installed")
+        #self._delete_repo()
+
+    def make_activate_replaces(self) -> dict:
+        return {
+
+        }
 
 
     def _prepare_dirs(self):
@@ -102,9 +119,9 @@ class Gron:
 
     def _setup_gron_cfg(self):
         replaces = {
-            "<ANSIBLE_PATH>": str(self.config.ansible_repo_path),
+            "<ANSIBLE_PATH>": str(self._config.ansible_repo_path),
         }
-        with open(self.config.templates_path / 'gron.yml', 'r') as f:
+        with open(self._config.templates_path / 'gron.yml', 'r') as f:
             gron_cfg = f.read()
 
         for repl_from, repl_to in replaces.items():
@@ -112,15 +129,5 @@ class Gron:
 
         with open(self.gron_cfg_path, 'w') as f:
             f.write(gron_cfg)
-
-    def install(self):
-        logger.info('Install gron ...')
-        self._create_venv()
-        self._clone_repo()
-        self._install_venv_requirements()
-        self._setup_gron_cfg()
-        self._create_bin()
-        logger.info("Gron installed")
-        #self._delete_repo()
 
 

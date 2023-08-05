@@ -7,17 +7,32 @@ from pathlib import Path
 from common.logger import logger
 from common.config import get_config
 from common.download_file import download_file
+from installers.installer import Installer
 
 
-class Helm:
+class Helm(Installer):
 
-    def __init__(self, workdir):
-        self.config = get_config()
-        self.workdir = workdir
-        self.desired_platform = self.config.platform
-        self.desired_ver = self.config.helm_ver
-        self.download_url = self.config.helm_url
+    def __init__(self):
+        self._config = get_config()
+        self.enabled = self._config.helm_enabled
+        self.workdir = self._config.workdir
+        self.desired_platform = self._config.platform
+        self.desired_ver = self._config.helm_ver
+        self.download_url = self._config.helm_url
         self.bin_path = self.workdir.bin / 'helm'
+
+    def install(self):
+        logger.info('Install Helm ...')
+        current_version = self._check_current_ver()
+        if current_version == self.desired_ver:
+            logger.info('helm already installed')
+            return
+        self._download()
+        logger.info("Helm installed")
+
+    def make_activate_replaces(self) -> dict:
+        return  {}
+
 
     def _check_current_ver(self):
         if not os.path.exists(self.bin_path):
@@ -57,7 +72,7 @@ class Helm:
         zip_arch = self.workdir.tmp / 'helm.tar.gz'
 
         logger.debug('Download helm {} -> {}'.format(url, zip_arch))
-        if not download_file(url, zip_arch, self.config.proxies):
+        if not download_file(url, zip_arch, self._config.proxies):
             sys.exit(1)
 
         # Unzip
@@ -78,13 +93,3 @@ class Helm:
         logger.debug('Move helm bin to {}'.format(self.bin_path))
         os.remove(zip_arch)
         shutil.move(self.workdir.tmp / f'helm/{self.desired_platform}-{arch}/helm', self.bin_path)
-
-    def install(self):
-        logger.info('Install Helm ...')
-        current_version = self._check_current_ver()
-        if current_version == self.desired_ver:
-            logger.info('helm already installed')
-            return
-        self._download()
-        logger.info("Helm installed")
-

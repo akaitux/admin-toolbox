@@ -6,11 +6,11 @@ if [ "${BASH_SOURCE-}" = "$0" ]; then
     exit 33
 fi
 
-run_bastion_ssh_agent () {
-    SSH_AGENT_PID_PATH="<SSH_AGENT_PID_PATH>"
-    SSH_AGENT_CMD_RUN="<SSH_AGENT_CMD_RUN>"
-    SSH_AGENT_SOCK="<SSH_AGENT_SOCK>"
-    SSH_BASTION_HOST="<SSH_BASTION_HOST>"
+run_ssh_agent () {
+    local SSH_AGENT_PID_PATH="<SSH_AGENT_PID_PATH>"
+    local SSH_AGENT_CMD_RUN="<SSH_AGENT_CMD_RUN>"
+    local SSH_AGENT_SOCK="<SSH_AGENT_SOCK>"
+    local SSH_HOST="<SSH_HOST>"
     if [ -f "$SSH_AGENT_PID_PATH" ]; then
         pid=$(cat "$SSH_AGENT_PID_PATH")
         echo $pid
@@ -19,73 +19,138 @@ run_bastion_ssh_agent () {
             return
         fi
     fi
-    stop_ssh_bastion_agent
+    stop_ssh_agent
     out=$(eval $SSH_AGENT_CMD_RUN)
     local pid=$(echo $out | grep -oP "SSH_AGENT_PID=\K([[:digit:]]+)")
     echo $pid > $SSH_AGENT_PID_PATH
-    SSH_AUTH_SOCK=$SSH_AGENT_SOCK /usr/bin/ssh -o 'ForwardAgent yes' $SSH_BASTION_HOST "ssh-add 2>&1 > /dev/null" >/dev/null
+    SSH_AUTH_SOCK=$SSH_AGENT_SOCK /usr/bin/ssh -o 'ForwardAgent yes' $SSH_HOST "ssh-add 2>&1 > /dev/null" >/dev/null
 }
 
-stop_ssh_bastion_agent () {
-    SSH_AGENT_CMD_RUN="<SSH_AGENT_CMD_RUN>"
-    SSH_AGENT_PID_PATH="<SSH_AGENT_PID_PATH>"
-    SSH_AGENT_SOCKET="<SSH_AGENT_SOCKET>"
+stop_ssh_agent () {
+    local SSH_AGENT_CMD_RUN="<SSH_AGENT_CMD_RUN>"
+    local SSH_AGENT_PID_PATH="<SSH_AGENT_PID_PATH>"
+    local SSH_AGENT_SOCK="<SSH_AGENT_SOCK>"
     ps aux | grep "$SSH_AGENT_CMD_RUN" | head -n -1 | awk '{print $2}' | xargs -I {} kill -9 {}
     rm -f $SSH_AGENT_PID_PATH
     rm -f $SSH_AGENT_SOCK
+}
+
+deactivate_vault () {
+    <VAULT_DEACTIVATE LOAD_ENV_VARS>
+    if ! [ -z "${_OLD_VAULT_ADDR+_}" ] ; then
+        VAULT_ADDR="$_OLD_VAULT_ADDR"
+        export VAULT_ADDR
+        unset _OLD_VAULT_ADDR
+    fi
+    if ! [ -z "${_OLD_VAULT_TOKEN+_}" ] ; then
+        VAULT_TOKEN="$_OLD_VAULT_TOKEN"
+        export VAULT_TOKEN
+        unset _OLD_VAULT_TOKEN
+    fi
+}
+
+deactivate_ansible() {
+    if ! [ -z "${_OLD_ANSIBLE_CONFIG+_}" ] ; then
+        ANSIBLE_CONFIG="$_OLD_ANSIBLE_CONFIG"
+        export ANSIBLE_CONFIG
+        unset _OLD_ANSIBLE_CONFIG
+    fi
+    unalias ans 2>/dev/null
+}
+
+deactivate_gcloud () {
+    if ! [ -z "${_OLD_CLOUDSDK_CONFIG+_}" ] ; then
+        CLOUDSDK_CONFIG="$_OLD_CLOUDSDK_CONFIG"
+        export CLOUDSDK_CONFIG
+        unset _OLD_CLOUDSDK_CONFIG
+    fi
+    if ! [ -z "${_OLD_GOOGLE_APPLICATION_CREDENTIALS+_}" ] ; then
+        GOOGLE_APPLICATION_CREDENTIALS="$_OLD_GOOGLE_APPLICATION_CREDENTIALS"
+        export GOOGLE_APPLICATION_CREDENTIALS
+        unset _OLD_GOOGLE_APPLICATION_CREDENTIALS
+    fi
+}
+
+deactivate_kubectl () {
+    if ! [ -z "${_OLD_KUBECONFIG+_}" ] ; then
+        KUBECONFIG="$_OLD_KUBECONFIG"
+        export KUBECONFIG
+        unset _OLD_KUBECONFIG
+    fi
+}
+
+deactivate_python_venv () {
+    if ! [ -z "${_OLD_VIRTUALENVWRAPPER_PYTHON+_}" ] ; then
+        VIRTUALENVWRAPPER_PYTHON="$_OLD_VIRTUALENVWRAPPER_PYTHON"
+        export VIRTUALENVWRAPPER_PYTHON
+        unset _OLD_VIRTUALENVWRAPPER_PYTHON
+    fi
+}
+
+deactivate_terra () {
+    if ! [ -z "${_OLD_TERRAFORM_ALIAS:+_}" ]; then
+        eval "alias $_OLD_TERRAFORM_ALIAS";
+    elif [ ! "${1-}" = "nondestructive" ] ; then
+        unalias terraform 2>/dev/null
+    fi
+    unset _OLD_TERRAFORM_ALIAS
+
+    if ! [ -z "${_OLD_TERRAGRUNT_ALIAS:+_}" ]; then
+        eval "alias $_OLD_TERRAGRUNT_ALIAS";
+    elif [ ! "${1-}" = "nondestructive" ] ; then
+        unalias terragrunt 2>/dev/null
+    fi
+    unset _OLD_TERRAGRUNT_ALIAS
+
+}
+
+deactivate_argocd () {
+    if ! [ -z "${_OLD_ARGOCD_ALIAS:+_}" ]; then
+        eval "alias $_OLD_ARGOCD_ALIAS";
+    elif [ ! "${1-}" = "nondestructive" ] ; then
+        unalias argocd 2>/dev/null
+    fi
+    unset _OLD_ARGOCD_ALIAS
+}
+
+
+deactivate_ssh() {
+    if ! [ -z "${_OLD_SSH_ALIAS:+_}" ]; then
+        eval "alias $_OLD_SSH_ALIAS";
+    elif [ ! "${1-}" = "nondestructive" ] ; then
+        unalias ssh 2>/dev/null
+    fi
+    unset _OLD_SSH_ALIAS
+    stop_ssh_agent
+}
+
+deactivate_additional_aliases () {
+    unalias admin-toolbox-info 2>/dev/null
 }
 
 deactivate () {
     # reset old environment variables
     # ! [ -z ${VAR+_} ] returns true if VAR is declared at all
 
-    <VAULT_DEACTIVATE LOAD_ENV_VARS>
-
     if ! [ -z "${_OLD_VIRTUAL_PATH:+_}" ] ; then
         PATH="$_OLD_VIRTUAL_PATH"
         export PATH
         unset _OLD_VIRTUAL_PATH
     fi
-    if ! [ -z "${_OLD_ANSIBLE_CONFIG+_}" ] ; then
-        ANSIBLE_CONFIG="$_OLD_ANSIBLE_CONFIG"
-        export ANSIBLE_CONFIG
-        unset _OLD_ANSIBLE_CONFIG
-    fi
 
-    if ! [ -z "${_OLD_VAULT_ADDR+_}" ] ; then
-        VAULT_ADDR="$_OLD_VAULT_ADDR"
-        export VAULT_ADDR
-        unset _OLD_VAULT_ADDR
-    fi
+    deactivate_vault
+    deactivate_ansible
+    deactivate_gcloud
+    deactivate_kubectl
+    deactivate_python_venv
+    deactivate_terra
+    deactivate_argocd
+    deactivate_ssh
+    deactivate_additional_aliases
 
-    if ! [ -z "${_OLD_CLOUDSDK_CONFIG+_}" ] ; then
-       CLOUDSDK_CONFIG="$_OLD_CLOUDSDK_CONFIG"
-        export CLOUDSDK_CONFIG
-        unset _OLD_CLOUDSDK_CONFIG
-    fi
-
-    if ! [ -z "${_OLD_GOOGLE_APPLICATION_CREDENTIALS+_}" ] ; then
-       GOOGLE_APPLICATION_CREDENTIALS="$_OLD_GOOGLE_APPLICATION_CREDENTIALS"
-        export GOOGLE_APPLICATION_CREDENTIALS
-        unset _OLD_GOOGLE_APPLICATION_CREDENTIALS
-    fi
-
-    if ! [ -z "${_OLD_VAULT_TOKEN+_}" ] ; then
-       VAULT_TOKEN="$_OLD_VAULT_TOKEN"
-        export VAULT_TOKEN
-        unset _OLD_VAULT_TOKEN
-    fi
-
-    if ! [ -z "${_OLD_KUBECONFIG+_}" ] ; then
-        KUBECONFIG="$_OLD_KUBECONFIG"
-        export KUBECONFIG
-        unset _OLD_KUBECONFIG
-    fi
-
-    if ! [ -z "${_OLD_VIRTUALENVWRAPPER_PYTHON+_}" ] ; then
-        VIRTUALENVWRAPPER_PYTHON="$_OLD_VIRTUALENVWRAPPER_PYTHON"
-        export VIRTUALENVWRAPPER_PYTHON
-        unset _OLD_VIRTUALENVWRAPPER_PYTHON
+    if [ ! "${1-}" = "nondestructive" ] ; then
+    # Self destruct!
+        unset -f deactivate
     fi
 
     # This should detect bash and zsh, which have a hash command that must
@@ -101,93 +166,61 @@ deactivate () {
         unset _OLD_VIRTUAL_PS1
     fi
 
-    if ! [ -z "${_OLD_TERRAFORM_ALIAS:+_}" ]; then
-        eval "alias $_OLD_TERRAFORM_ALIAS";
-    elif [ ! "${1-}" = "nondestructive" ] ; then
-        unalias terraform 2>/dev/null
-    fi
-    unset _OLD_TERRAFORM_ALIAS
-
-    if ! [ -z "${_OLD_TERRAGRUNT_ALIAS:+_}" ]; then
-        eval "alias $_OLD_TERRAGRUNT_ALIAS";
-    elif [ ! "${1-}" = "nondestructive" ] ; then
-        unalias terragrunt 2>/dev/null
-    fi
-    unset _OLD_TERRAGRUNT_ALIAS
-
-    if ! [ -z "${_OLD_ARGOCD_ALIAS:+_}" ]; then
-        eval "alias $_OLD_ARGOCD_ALIAS";
-    elif [ ! "${1-}" = "nondestructive" ] ; then
-        unalias argocd 2>/dev/null
-    fi
-    unset _OLD_ARGOCD_ALIAS
-
-    if ! [ -z "${_OLD_SSH_ALIAS:+_}" ]; then
-        eval "alias $_OLD_SSH_ALIAS";
-    elif [ ! "${1-}" = "nondestructive" ] ; then
-        unalias ssh 2>/dev/null
-    fi
-    unset _OLD_SSH_ALIAS
-
-
-    unset ANSIBLE_PATH
-    unset ANSIBLE_PYTHON
-    unalias vlg 2>/dev/null
-    unalias ans 2>/dev/null
-    unalias admin-toolbox-info 2>/dev/null
-
-    if [ ! "${1-}" = "nondestructive" ] ; then
-    # Self destruct!
-        unset -f deactivate
-    fi
-
-    stop_ssh_bastion_agent
 }
 
 
 activate_python_venv () {
-    if [ "<PYTHON_VENV_ENABLED>" ]; then
+    local PYTHON_VENV_ENABLED="<PYTHON_VENV_ENABLED>"
+    local PYTHON_VENV="<PYTHON_VENV>"
+
+    if [ "$PYTHON_VENV_ENABLED" ]; then
         _OLD_PYTHON_WRAPPER="$VIRTUALENVWRAPPER_PYTHON"
-        VIRTUALENVWRAPPER_PYTHON="<PYTHON_VENV>/bin/python3"
+        VIRTUALENVWRAPPER_PYTHON="$PYTHON_VENV/bin/python3"
         export VIRTUALENVWRAPPER_PYTHON
-        PATH="<PYTHON_VENV>/bin:$PATH"
+        PATH="$PYTHON_VENV/bin:$PATH"
     fi
 }
 
 activate_ansible () {
-    if [ "<ANSIBLE_ENABLED>" ]; then
+    ANSIBLE_CONFIG="<ANSIBLE_CONFIG>"
+    ANSIBLE_PATH="<ANSIBLE_PATH>"
+    local ANSIBLE_ENABLED="<ANSIBLE_ENABLED>"
+    local ANSIBLE_WORKDIR="<ANSIBLE_WORKDIR>"
+    local ANSIBLE_BINDIR="<ANSIBLE_BINDIR>"
+
+    if [ "$ANSIBLE_ENABLED" ]; then
         _OLD_ANSIBLE_CONFIG="$ANSIBLE_CONFIG"
-        ANSIBLE_CONFIG="<ANSIBLE_CONFIG>"
         export ANSIBLE_CONFIG
 
-        ANSIBLE_PATH="<ANSIBLE_PATH>"
         export ANSIBLE_PATH
-        ANSIBLE_PYTHON="<WORKDIR_ANSIBLE>/venv/bin/python"
+        ANSIBLE_PYTHON="$ANSIBLE_WORKDIR/venv/bin/python"
         export ANSIBLE_PYTHON
 
-        PATH="<WORKDIR_BIN>:<WORKDIR_BIN>/ansible:$PATH"
-        export PATH
+        PATH="<ANSIBLE_BINDIR>:$PATH"
     fi
 
-    alias ans='cd <ANSIBLE_PATH>'
+    alias ans='cd $ANSIBLE_PATH'
     # variable for use in cd, for exam. cd $ans/some_dir
-    ans='<ANSIBLE_PATH>'
+    ans='$ANSIBLE_PATH'
     export ans
 }
 
 activate_vault () {
     _OLD_VAULT_ADDR="$VAULT_ADDR"
-    VAULT_ADDR="<VAULT_ADDR>"
-    export VAULT_ADDR
+    local VAULT_ADDR="<VAULT_ADDR>"
+    local VAULT_IS_LOAD_ENV_VARS="<VAULT_IS_LOAD_ENV_VARS>"
+    local VAULT_LOGIN_METHOD="<VAULT_LOGIN_METHOD>"
 
     _OLD_VAULT_TOKEN="$VAULT_TOKEN"
     VAULT_TOKEN=""
-    if [ -f "<WORKDIR_ROOT>/vault_token" ]; then
-        VAULT_TOKEN="$(cat <WORKDIR_ROOT>/vault_token)"
+    if [ -f "$WORKDIR_ROOT/vault_token" ]; then
+        VAULT_TOKEN="$(cat $WORKDIR_ROOT/vault_token)"
     fi
+
+    export VAULT_ADDR
     export VAULT_TOKEN
 
-    if [ "<VAULT_IS_LOAD_ENV_VARS>" ]; then
+    if [ "$VAULT_IS_LOAD_ENV_VARS" ]; then
         is_loggedin=$(vault token lookup >/dev/null 2>&1 ; echo $?)
         if [ "$is_loggedin" != "0" ]; then
             echo "Login into vault"
@@ -200,8 +233,8 @@ activate_vault () {
 
     alias vault-login='
         f(){
-            VAULT_TOKEN=$(vault login -method=<VAULT_LOGIN_METHOD> -token-only username=$1)
-            echo -n "$VAULT_TOKEN" > <WORKDIR_ROOT>/vault_token;
+            VAULT_TOKEN=$(vault login -method=$VAULT_LOGIN_METHOD -token-only username=$1)
+            echo -n "$VAULT_TOKEN" > $WORKDIR_ROOT/vault_token;
             export VAULT_TOKEN
             unset -f f
         };
@@ -212,8 +245,14 @@ activate_vault () {
 activate_terra () {
     _OLD_TERRAFORM_ALIAS=$(alias terraform)
     _OLD_TERRAGRUNT_ALIAS=$(alias terragrunt)
-    alias <ALIAS_TERRAFORM>
-    alias <ALIAS_TERRAGRUNT>
+    local TERRAFORM_ENABLED="<TERRAFORM_ENABLED>"
+    local TERRAGRUNT_ENABLED="<TERRAGRUNT_ENABLED>"
+    if [ "$TERRAFORM_ENABLED" ]; then
+        alias <ALIAS_TERRAFORM>
+    fi
+    if [ "$TERRAGRUNT_ENABLED" ]; then
+        alias <ALIAS_TERRAGRUNT>
+    fi
 }
 
 activate_argocd () {
@@ -221,47 +260,62 @@ activate_argocd () {
     alias <ALIAS_ARGOCD>
 }
 
-activate_ssh_bastion () {
+activate_ssh () {
     _OLD_SSH_ALIAS=$(alias ssh)
-    if [ "<SSH_ALIAS>" ]; then
+
+    if [ "<SSH_ENABLED>" ]; then
         alias <SSH_ALIAS>
     fi
-    run_bastion_ssh_agent
+    run_ssh_agent
 }
 
 activate_gcloud () {
+    local GCLOUD_ENABLED="<GCLOUD_ENABLED>"
+    if [ -z "$GCLOUD_ENABLED"]; then
+        return
+    fi
+
     _OLD_CLOUDSDK_CONFIG="$CLOUDSDK_CONFIG"
-    CLOUDSDK_CONFIG=<GCLOUD_CFG_PATH>
+
+    local CLOUDSDK_CONFIG="<GCLOUD_CFG_PATH>"
     export CLOUDSDK_CONFIG
 
     _OLD_GOOGLE_APPLICATION_CREDENTIALS="$GOOGLE_APPLICATION_CREDENTIALS"
-    GOOGLE_APPLICATION_CREDENTIALS="<GCLOUD_CFG_PATH>/application_default_credentials.json"
+    local GOOGLE_APPLICATION_CREDENTIALS="$CLOUDSDK_CONFIG/application_default_credentials.json"
     export GOOGLE_APPLICATION_CREDENTIALS
 }
 
 activate_kubectl () {
     _OLD_KUBECONFIG="$KUBECONFIG"
-    KUBECONFIG="<KUBE_CONFIG_PATH>/config"
+    local KUBECONFIG="<KUBE_CONFIG_PATH>/config"
     export KUBECONFIG
 }
 
 activate_additional_aliases () {
-    alias admin-toolbox-info='cat <WORKDIR_ROOT>/.info'
+    alias admin-toolbox-info='cat $WORKDIR_ROOT/.info'
 }
 
 # unset irrelevant variables
 deactivate nondestructive
+
+WORKDIR_BIN="<WORKDIR_BIN>"
+WORKDIR_ROOT="<WORKDIR_ROOT>"
+TOOLBOX_NAME="<TOOLBOX_NAME>"
+
 _OLD_VIRTUAL_PATH="$PATH"
+PATH="$WORKDIR_BIN:$PATH"
 
 activate_python_venv
 activate_ansible
 activate_vault
 activate_terra
 activate_argocd
-activate_ssh_bastion
+activate_ssh
 activate_gcloud
 activate_kubectl
 activate_additional_aliases
+
+export PATH
 
 
 if [ -z "${ADMIN_TOOLBOX_DISABLE_PROMPT-}" ] ; then
@@ -269,7 +323,7 @@ if [ -z "${ADMIN_TOOLBOX_DISABLE_PROMPT-}" ] ; then
     if [ "x" != x ] ; then
         PS1="${PS1-}"
     else
-        PS1="(`basename \"<TOOLBOX_NAME>\"`) ${PS1-}"
+        PS1="(`basename \"$TOOLBOX_NAME\"`) ${PS1-}"
     fi
     export PS1
 fi

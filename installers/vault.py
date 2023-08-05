@@ -4,16 +4,47 @@ import sys
 from common.logger import logger
 from common.config import get_config
 from common.download_file import download_file
+from installers.installer import Installer
 
-class Vault:
+class Vault(Installer):
 
     def __init__(self):
-        self.config = get_config()
-        self.workdir = self.config.workdir
-        self.desired_platform = self.config.platform
-        self.desired_ver = self.config.vault_ver
-        self.download_url = self.config.vault_url
+        self._config = get_config()
+        self.enabled = self._config.vault_enabled
+        self.workdir = self._config.workdir
+        self.desired_platform = self._config.platform
+        self.desired_ver = self._config.vault_ver
+        self.download_url = self._config.vault_download_url
         self.bin_path = self.workdir.bin / 'vault'
+
+        self.addr = self._config.vault_addr
+        self.login_method = self._config.vault_login_method
+
+    def install(self):
+        current_version = self._check_current_ver()
+        if current_version == self.desired_ver:
+            logger.info('Vault already installed')
+            return
+        self._download()
+        logger.info("Vault installed")
+
+    def make_activate_replaces(self) -> dict:
+        replaces = {
+            "<VAULT_ADDR>": str(self.addr),
+            "<VAULT_LOGIN_METHOD>": str(self.login_method),
+            "<VAULT_IS_LOAD_ENV_VARS>": "",
+            "<VAULT_LOAD_ENV_VARS>": "",
+            "<VAULT_DEACTIVATE LOAD_ENV_VARS>": "",
+        }
+        load_env_vars = self.generate_env_load()
+        deactivate_env_vars = self.generate_env_deactivate()
+        if load_env_vars:
+            load_env_vars = '\n'.join(load_env_vars)
+            deactivate_env_vars = '\n'.join(deactivate_env_vars)
+            replaces["<VAULT_IS_LOAD_ENV_VARS>"] = "TRUE"
+            replaces["<VAULT_LOAD_ENV_VARS>"] = load_env_vars
+            replaces["<VAULT_DEACTIVATE LOAD_ENV_VARS>"] = deactivate_env_vars
+        return replaces
 
     def _check_current_ver(self):
         if not os.path.exists(self.bin_path):
@@ -47,7 +78,7 @@ class Vault:
         zip_arch = self.workdir.tmp / 'vault.zip'
 
         logger.debug('Download vault {} -> {}'.format(url, zip_arch))
-        if not download_file(url, zip_arch, self.config.proxies):
+        if not download_file(url, zip_arch, self._config.proxies):
             sys.exit(1)
 
         # Unzip
@@ -73,7 +104,7 @@ class Vault:
         os.rmdir(self.workdir.tmp / 'vault')
 
     def generate_env_deactivate(self) -> list:
-        load_env_vars = self.config.vault_load_env_vars
+        load_env_vars = self._config.vault_load_env_vars
         cmds = []
         if not load_env_vars:
             return []
@@ -85,7 +116,7 @@ class Vault:
 
 
     def generate_env_load(self) -> list:
-        load_env_vars = self.config.vault_load_env_vars
+        load_env_vars = self._config.vault_load_env_vars
         cmds = []
         if not load_env_vars:
             return []
@@ -98,13 +129,4 @@ class Vault:
                 "export {}=$(vault kv get -format=json {} | jq -r .data.data.{})".format(env_var, vault_path, vault_item)
             )
         return cmds
-
-
-    def install(self):
-        current_version = self._check_current_ver()
-        if current_version == self.desired_ver:
-            logger.info('Vault already installed')
-            return
-        self._download()
-        logger.info("Vault installed")
 

@@ -8,7 +8,7 @@ from common.validators import check_dependencies, validate_platform
 from common.logger import setup_logger
 from common.config import Config
 from common.workdir import Workdir
-from common.prepare_activate import prepare_activate
+from installers.activate import Activate
 from installers.python_venv import PythonVenv
 from installers.ansible import Ansible
 from installers.vault import Vault
@@ -20,7 +20,7 @@ from installers.kubectl import Kubectl
 from installers.gron import Gron
 from installers.helm import Helm
 from installers.argocd import ArgoCD
-from installers.ssh_bastion import SSHBastion
+from installers.ssh import SSH
 
 
 def run(args):
@@ -44,101 +44,46 @@ def run(args):
         sys.exit(0)
 
     check_dependencies()
-
     validate_platform()
 
+    installers = [
+        PythonVenv(),
+        Vault(),
+        Ansible(),
+        Terraform(),
+        Terragrunt(),
+        Gcloud(),
+        Kubectl(),
+        K9S(),
+        Gron(),
+        Helm(),
+        ArgoCD(),
+        SSH(),
+    ]
+
+    activate_replaces = {}
+    activate = Activate()
+
     try:
-        logger.info("Make 'activate' ...")
-
-        prepare_activate(config)
-
-        logger.info("Install ...")
-
-        if config.python_enabled:
-            python_venv = PythonVenv()
-            print("\n")
-            python_venv.install()
+        for installer in installers:
+            activate_replaces.update(installer.make_activate_replaces())
+        activate.replace(activate_replaces)
+        if activate.is_valid():
+            activate.write_template()
         else:
-            logger.info("Skip python")
+            logger.error("Internal error in activate.sh template")
+            sys.exit(1)
 
-        if config.ansible_enabled:
-            ansible = Ansible()
-            print("\n")
-            ansible.install()
-        else:
-            logger.info("Skip ansible")
-
-        if config.vault_enabled:
-            vault = Vault()
-            print("\n")
-            vault.install()
-        else:
-            logger.info("Skip vault")
-
-        if config.terraform_enabled:
-            terraform = Terraform(workdir)
-            print("\n")
-            terraform.install()
-        else:
-            logger.info("Skip terraform")
-
-        if config.terragrunt_enabled:
-            terragrunt = Terragrunt(workdir)
-            print("\n")
-            terragrunt.install()
-        else:
-            logger.info("Skip terragrunt")
-
-        if config.gcloud_enabled:
-            gcloud = Gcloud(workdir)
-            print("\n")
-            gcloud.install()
-        else:
-            logger.info("Skip gcloud")
-
-        if config.kubectl_enabled:
-            kubectl = Kubectl(workdir)
-            print("\n")
-            kubectl.install()
-        else:
-            logger.info("Skip kubectl")
-
-        if config.k9s_enabled:
-            k9s = K9S(workdir)
-            print("\n")
-            k9s.install()
-        else:
-            logger.info("Skip k9s")
-
-        if config.gron_enabled:
-            gron = Gron(workdir)
-            print("\n")
-            gron.install()
-        else:
-            logger.info("Skip gron")
-
-        if config.helm_enabled:
-            helm = Helm(workdir)
-            print("\n")
-            helm.install()
-        else:
-            logger.info("Skip helm")
-
-        if config.argocd_enabled:
-            argocd = ArgoCD(workdir)
-            print("\n")
-            argocd.install()
-        else:
-            logger.info("Skip argocd")
-
-        if config.ssh_bastion_enabled:
-            ssh= SSHBastion()
-            print("\n")
-            ssh.install()
-        else:
-            logger.info("Skip ssh bastion")
+        for installer in installers:
+            if installer.enabled:
+                logger.info("Install {}".format(installer.__class__.__name__))
+                installer.install()
+            else:
+                logger.info("Skip {}".format(installer.__class__.__name__))
+            print()
     finally:
         workdir.cleanup()
+
 
     info = get_info(config)
     _save_info_to_file(config)
@@ -154,12 +99,15 @@ def _save_info_to_file(config):
 
 def get_info(config):
     help = []
-    help.append("To start working with the env: \n\tsource {}".format(config.activate_path))
+    activate = Activate()
+    ansible = Ansible()
+    gcloud = Gcloud()
+    help.append("To start working with the env: \n\tsource {}".format(activate.install_path))
     help.append("To end working with the env: \n\tdeactivate")
-    help.append("Add alias to .<shell>rc: \n\t alias [alias]=\"source {}\"".format(config.activate_path))
+    help.append("Add alias to .<shell>rc: \n\t alias [alias]=\"source {}\"".format(activate.install_path))
     help.append("\nToolbox dir: {}".format(config.workdir.root))
-    help.append("Ansible: {}".format(config.ansible_repo_path))
-    if config.gcloud_ver and config.gcloud_url:
+    help.append("Ansible: {}".format(ansible.repo))
+    if gcloud.version and gcloud.url:
         help.append("\nGoogle:\n\tLogin to gcloud with: gcloud auth login --no-launch-browser")
         help.append("\tToestaan == accept")
         help.append("\tUse browser with proxy (waterfox?)")
@@ -168,7 +116,7 @@ def get_info(config):
     help.append("\nCLI:")
     help.append("\tVault login:> vault-login <username>")
     help.append("\tVault logout:> vault-logout")
-    if config.ansible_repo_path:
+    if ansible.repo:
         help.append("\tcd to Ansible dir:> ans")
         help.append("\tcd to dir in Ansible:> cd $ans/common_roles")
     return '\n'.join(help)

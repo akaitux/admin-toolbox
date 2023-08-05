@@ -7,26 +7,37 @@ import subprocess
 import os
 import sys
 
+from installers.installer import Installer
 
-class PythonVenv:
+
+class PythonVenv(Installer):
     def __init__(self, workdir: Optional[Path] = None):
-        self.config: Config = get_config()
-        self.enabled = self.config.python_enabled
+        self._config: Config = get_config()
+        self.enabled = self._config.python_enabled
         self.workdir = Path()
         self.is_standalone = False
         if workdir:
             self.workdir = workdir
         else:
-            self.workdir = self.config.workdir.root / 'python'
+            self.workdir = self._config.workdir.root / 'python'
             self.is_standalone = True
         self.venv = self.workdir / 'venv'
-        self.workdir_root_bin = self.config.workdir.bin
+        self.workdir_root_bin = self._config.workdir.bin
 
     def install(self):
         self._prepare_dirs()
         self._create_venv()
         if self.is_standalone:
-            self.install_packages(self.config.python_packages)
+            self.install_packages(self._config.python_packages)
+
+    def make_activate_replaces(self) -> dict:
+        replaces = {}
+        if not self.enabled:
+            replaces["<PYTHON_VENV_ENABLED>"] = ""
+        else:
+            replaces["<PYTHON_VENV_ENABLED>"] = "true"
+        replaces["<PYTHON_VENV>"] = str(self.venv)
+        return replaces
 
     def _prepare_dirs(self):
         if self.workdir.exists():

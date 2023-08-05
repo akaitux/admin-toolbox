@@ -3,22 +3,40 @@ from pathlib import Path
 import subprocess
 import os
 
+from installers.installer import Installer
 
-class SSHBastion:
+
+class SSH(Installer):
 
     def __init__(self):
-        self.config = get_config()
-        self.workdir = self.config.workdir.root
-        self.dir = Path(self.config.ssh_bastion_dir)
-        self.user = self.config.ssh_bastion_user
-        self.config_path = self.config.ssh_bastion_config
-        self.host = self.config.ssh_bastion_host
+        self._config = get_config()
+        self.enabled = self._config.ssh_enabled
+        self.workdir = self._config.workdir.root
+        self.dir = self.workdir / "ssh"
+        self.config_path = self.dir / "config"
+        self.user = self._config.ssh_user
+        self.host = self._config.ssh_host
         self.agent_socket = self.dir / "agent.socket"
         self.agent_pid_file = self.dir / "agent.pid"
 
     def install(self):
         Path(self.dir).mkdir(exist_ok=True)
         self._create_config()
+
+    def make_activate_replaces(self) -> dict:
+        replaces = {}
+        if self.enabled:
+            replaces['<SSH_ENABLED>'] = "true"
+        else:
+            replaces['<SSH_ENABLED>'] = ""
+        alias = "ssh='ssh -F {}'".format(self.config_path)
+        replaces["<SSH_ALIAS>"] = alias
+        run_cmd = ' '.join([str(x) for x in self.generate_run_agent_cmd()])
+        replaces["<SSH_AGENT_CMD_RUN>"] = run_cmd
+        replaces["<SSH_AGENT_PID_PATH>"] = str(self.agent_pid_file)
+        replaces["<SSH_AGENT_SOCK>"] = str(self.agent_socket)
+        replaces["<SSH_HOST>"] = str(self.host)
+        return replaces
 
     def _create_config(self):
         config = "HOST *\n"
