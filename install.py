@@ -54,9 +54,12 @@ def run(args):
 
         logger.info("Install ...")
 
-        python_venv = PythonVenv()
-        print("\n")
-        python_venv.install()
+        if config.python_enabled:
+            python_venv = PythonVenv()
+            print("\n")
+            python_venv.install()
+        else:
+            logger.info("Skip python")
 
         if config.ansible_enabled:
             ansible = Ansible()

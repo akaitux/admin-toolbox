@@ -19,6 +19,7 @@ class Ansible:
         self.repo_url = self.config.ansible_repo_url
         self.workdir_ansible = self.workdir.root / 'ansible/'
         self.workdir_root_bin = self.workdir.bin
+        self.venv = self.workdir_ansible / 'venv/'
         self.cfg_path = self.config.ansible_cfg_path
         self.repo_cfg_path = self.config.ansible_repo_cfg_path
         self.activate_path = self.workdir.root / "activate"
@@ -28,6 +29,26 @@ class Ansible:
 
     def _prepare_dirs(self):
         self.workdir_ansible.mkdir(exist_ok=True)
+
+    def _create_venv(self):
+        if self.venv.exists():
+            shutil.rmtree(self.venv)
+        try:
+            p = subprocess.run(
+                ['virtualenv', '-p', 'python3', str(self.venv)],
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            )
+            if p.stdout:
+                logger.debug(p.stdout.decode("utf-8"))
+            if p.stderr:
+                logger.debug(p.stderr.decode("utf-8"))
+            logger.debug('ansible venv created')
+        except subprocess.CalledProcessError as exc:
+            logger.error("Error while creating ansible venv")
+            logger.error(exc.stdout)
+            sys.exit(1)
 
     def _clone_repo(self):
         if not self.repo_url:
@@ -61,26 +82,55 @@ class Ansible:
 
     def _install_venv_requirements(self):
         if self.version:
-            self.python.install_packages(['ansible=={}'.format(self.version)])
-
+            subprocess.run(
+                [
+                    '{}/bin/pip'.format(self.venv),
+                    '--disable-pip-version-check',
+                    'install',
+                    'ansible=={}'.format(self.version),
+                ],
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            )
         requirements = self.repo.joinpath("requirements.txt")
         logger.debug('Install ansible requirements')
-        self.python.install_requirements(requirements)
+        try:
+            subprocess.run(
+                [
+                    '{}/bin/pip'.format(self.venv),
+                    '--disable-pip-version-check',
+                    'install',
+                    '-r',
+                   requirements,
+                ],
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            )
+        except subprocess.CalledProcessError as exc:
+            logger.error(
+                "Error while install ansible requirements",
+            )
+            logger.error(exc.stdout)
+            sys.exit(1)
 
     def _create_bin_links(self):
         bin_files = [
-            self.python.venv / 'bin/{}'.format(f)
-            for f in os.listdir(self.python.venv / 'bin')
+            f
+            for f in os.listdir(self.venv / 'bin')
             if f.startswith('ansible')
         ]
         ansible_bin_dir = self.workdir_root_bin / 'ansible'
         ansible_bin_dir.mkdir(exist_ok=True)
         for f in bin_files:
-            link_to = ansible_bin_dir / f.name
+            link_from = self.venv / 'bin/{}'.format(f)
+
+            link_to = ansible_bin_dir / f
 
             try:
                 subprocess.run(
-                    ['ln', '-sf', f, link_to],
+                    ['ln', '-f', link_from, link_to],
                     check=True,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
@@ -148,6 +198,7 @@ class Ansible:
 
     def install(self):
         logger.info('Install ansible ...')
+        self._create_venv()
         self._clone_repo()
         self._install_venv_requirements()
         self._setup_ansible_cfg()

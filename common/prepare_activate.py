@@ -51,6 +51,10 @@ def _add_ansible(activate_tpl, config):
 
 def _add_python(activate_tpl):
     python_venv = PythonVenv()
+    if not python_venv.enabled:
+        activate_tpl = activate_tpl.replace("<PYTHON_VENV_ENABLED>", "")
+        return activate_tpl
+    activate_tpl = activate_tpl.replace("<PYTHON_VENV_ENABLED>", "true")
     activate_tpl = activate_tpl.replace("<PYTHON_VENV>", str(python_venv.venv))
     return activate_tpl
 
