@@ -71,6 +71,6 @@ Host some_git
     Hostname some.hostname
 
 HOST *
-	User toor
+    User toor
     IdentityAgent <IDENTITY_AGENT>
 ```
