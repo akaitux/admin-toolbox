@@ -2,7 +2,8 @@
     "ansible": {
         "enabled": false,
         "repo_url": "",
-        "repo_path": ""
+        "repo_path": "",
+        "use_ssh_agent": false
     },
 
     "ssh": {

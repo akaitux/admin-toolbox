@@ -25,6 +25,7 @@ class Ansible(Installer):
         self.cfg_path = self._config.ansible_cfg_path
         self.repo_cfg_path = self._config.ansible_repo_cfg_path
         self.activate_path = self.workdir.root / "activate"
+        self.use_ssh_agent = self._config.ansible_use_ssh_agent
         self.python = PythonVenv()
         self._prepare_dirs()
 
@@ -177,7 +178,7 @@ class Ansible(Installer):
 
         ssh = SSH()
 
-        if ssh.enabled:
+        if ssh.enabled and self.use_ssh_agent:
             is_ssh_connection_exists = False
             with open(tmp_src_cfg_path, 'r') as f:
                 cfg = f.read()
