@@ -1,4 +1,5 @@
 import sys
+from common.workdir import Workdir
 import os
 import json
 import platform
@@ -11,13 +12,11 @@ class Config(metaclass=Singleton):
 
     def  __init__(
             self,
-            toolbox_name,
-            toolbox_repo_dir,
-            workdir,
-            config_ini_path,
+            toolbox_name: str,
+            toolbox_repo_dir: Path,
+            workdir: Workdir,
+            config_ini_path: Path,
         ):
-        # workdir: Workdir()
-        # ini_config: config = ConfigParser(); config.read('...')
 
         self.toolbox_name = toolbox_name
         self.config_path = Path(config_ini_path).expanduser().resolve()
@@ -40,6 +39,9 @@ class Config(metaclass=Singleton):
         elif sys.platform == "darwin":
             self.platform = "darwin"
         self.is_x64 = platform.machine() in ("i386", "AMD64", "x86_64")
+
+        self.python_enabled = False
+        self.python_packages = []
 
         self.vault_enabled = False
         self.vault_addr = ""
@@ -101,13 +103,27 @@ class Config(metaclass=Singleton):
             if ansible_repo_cfg_path.exists():
                 self.ansible_repo_cfg_path = ansible_repo_cfg_path
 
+
+    def configure_python(self, config: dict):
+        section_name = "python"
+        section_cfg = config.get(section_name, {})
+        if not section_cfg:
+            print("No {n} in config or {n} is empty, skip".format(n=section_name))
+            return
+        if not section_cfg.get("enabled", False):
+            print("{} disabled, skip".format(section_name))
+            return
+        self.python_enabled = section_cfg.get("enabled", False)
+        self.python_packages = section_cfg.get("packages", [])
+
+
     def configure_vault(self, config: dict):
         section_name = "vault"
         section_cfg = config.get(section_name, {})
         if not section_cfg:
             print("No {n} in config or {n} is empty, skip".format(n=section_name))
             return
-        if not section_cfg.get("enabled", True):
+        if not section_cfg.get("enabled", False):
             print("{} disabled, skip".format(section_name))
             return
         self.vault_enabled = True
@@ -123,7 +139,7 @@ class Config(metaclass=Singleton):
         if not section_cfg:
             print("No {n} in config or {n} is empty, skip".format(n=section_name))
             return
-        if not section_cfg.get("enabled", True):
+        if not section_cfg.get("enabled", False):
             print("{} disabled, skip".format(section_name))
             return
         self.terraform_enabled = True
@@ -137,7 +153,7 @@ class Config(metaclass=Singleton):
         if not section_cfg:
             print("No {n} in config or {n} is empty, skip".format(n=section_name))
             return
-        if not section_cfg.get("enabled", True):
+        if not section_cfg.get("enabled", False):
             print("{} disabled, skip".format(section_name))
             return
         self.terragrunt_enabled = True
@@ -152,7 +168,7 @@ class Config(metaclass=Singleton):
         if not section_cfg:
             print("No {n} in config or {n} is empty, skip".format(n=section_name))
             return
-        if not section_cfg.get("enabled", True):
+        if not section_cfg.get("enabled", False):
             print("{} disabled, skip".format(section_name))
             return
         self.gcloud_enabled = True
@@ -165,7 +181,7 @@ class Config(metaclass=Singleton):
         if not section_cfg:
             print("No {n} in config or {n} is empty, skip".format(n=section_name))
             return
-        if not section_cfg.get("enabled", True):
+        if not section_cfg.get("enabled", False):
             print("{} disabled, skip".format(section_name))
             return
         self.k9s_enabled = True
@@ -178,7 +194,7 @@ class Config(metaclass=Singleton):
         if not section_cfg:
             print("No {n} in config or {n} is empty, skip".format(n=section_name))
             return
-        if not section_cfg.get("enabled", True):
+        if not section_cfg.get("enabled", False):
             print("{} disabled, skip".format(section_name))
             return
         self.kubectl_enabled = True
@@ -191,7 +207,7 @@ class Config(metaclass=Singleton):
         if not section_cfg:
             print("No {n} in config or {n} is empty, skip".format(n=section_name))
             return
-        if not section_cfg.get("enabled", True):
+        if not section_cfg.get("enabled", False):
             print("{} disabled, skip".format(section_name))
             return
         self.gron_enabled = True
@@ -203,7 +219,7 @@ class Config(metaclass=Singleton):
         if not section_cfg:
             print("No {n} in config or {n} is empty, skip".format(n=section_name))
             return
-        if not section_cfg.get("enabled", True):
+        if not section_cfg.get("enabled", False):
             print("{} disabled, skip".format(section_name))
             return
         self.helm_enabled = True
@@ -216,7 +232,7 @@ class Config(metaclass=Singleton):
         if not section_cfg:
             print("No {n} in config or {n} is empty, skip".format(n=section_name))
             return
-        if not section_cfg.get("enabled", True):
+        if not section_cfg.get("enabled", False):
             print("{} disabled, skip".format(section_name))
             return
         self.argocd_enabled = True
@@ -229,7 +245,7 @@ class Config(metaclass=Singleton):
         if not section_cfg:
             print("No {n} in config or {n} is empty, skip".format(n=section_name))
             return
-        if not section_cfg.get("enabled", True):
+        if not section_cfg.get("enabled", False):
             print("{} disabled, skip".format(section_name))
             return
         self.ansible_enabled = True
@@ -247,7 +263,7 @@ class Config(metaclass=Singleton):
         if not section_cfg:
             print("No {n} in config or {n} is empty, skip".format(n=section_name))
             return
-        if not section_cfg.get("enabled", True):
+        if not section_cfg.get("enabled", False):
             print("{} disabled, skip".format(section_name))
             return
         self.proxies['http'] = section_cfg.get('http_addr', '')
@@ -259,7 +275,7 @@ class Config(metaclass=Singleton):
         if not section_cfg:
             print("No {n} in config or {n} is empty, skip".format(n=section_name))
             return
-        if not section_cfg.get("enabled", True):
+        if not section_cfg.get("enabled", False):
             print("{} disabled, skip".format(section_name))
             return
         self.ssh_bastion_enabled = True
@@ -270,6 +286,7 @@ class Config(metaclass=Singleton):
 
     def _parse_config(self):
         config: dict = self._load_from_file()
+        self.configure_python(config)
         self.configure_vault(config)
         self.configure_terraform(config)
         self.configure_terragrunt(config)

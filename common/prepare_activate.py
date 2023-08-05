@@ -1,9 +1,12 @@
+from common.config import Config
 from common.logger import logger
 from installers.ssh_bastion import SSHBastion
 from installers.vault import Vault
+from installers.python_venv import PythonVenv
+from installers.ansible import Ansible
 
 
-def prepare_activate(config):
+def prepare_activate(config: Config):
     replaces = {
         "<TOOLBOX_NAME>": str(config.toolbox_name),
         "<ANSIBLE_PATH>": str(config.ansible_repo_path),
@@ -14,7 +17,9 @@ def prepare_activate(config):
         "<WORKDIR_TMP>": str(config.workdir.tmp),
         "<WORKDIR_BIN>": str(config.workdir.bin),
         "<WORKDIR_ANSIBLE>": str(config.workdir.root / 'ansible/'),
+        "<GCLOUD_ENABLED>": str(config.gcloud_enabled),
         "<GCLOUD_CFG_PATH>": str(config.gcloud_cfg_path),
+        "<KUBE_ENABLED>": str(config.kubectl_enabled),
         "<KUBE_CONFIG_PATH>": str(config.kube_config_path),
     }
     with open(config.activate_tpl_path, 'r') as f:
@@ -26,10 +31,28 @@ def prepare_activate(config):
     activate_tpl = _add_terra_aliases(activate_tpl, config)
     activate_tpl = _add_ssh_aliases(activate_tpl, config)
     activate_tpl = _add_vault(activate_tpl)
+    activate_tpl = _add_python(activate_tpl)
+    activate_tpl = _add_ansible(activate_tpl, config)
 
     with open(config.activate_path, 'w') as f:
         f.write(activate_tpl)
 
+
+def _add_ansible(activate_tpl, config):
+    ansible = Ansible()
+    if not ansible.enabled:
+        activate_tpl = activate_tpl.replace("<ANSIBLE_ENABLED>", "")
+        return activate_tpl
+    activate_tpl = activate_tpl.replace("<ANSIBLE_ENABLED>", "true")
+    activate_tpl = activate_tpl.replace("<ANSIBLE_CONFIG>", str(ansible.repo_cfg_path))
+    activate_tpl = activate_tpl.replace("<ANSIBLE_PATH>", str(ansible.repo))
+    return activate_tpl
+
+
+def _add_python(activate_tpl):
+    python_venv = PythonVenv()
+    activate_tpl = activate_tpl.replace("<PYTHON_VENV>", str(python_venv.venv))
+    return activate_tpl
 
 def _add_vault(activate_tpl):
     vault = Vault()

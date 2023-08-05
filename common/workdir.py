@@ -13,6 +13,7 @@ class Workdir:
             raise Exception('Workdir root not defined')
         self.tmp = Path("{}/tmp".format(self.root))
         self.bin = Path("{}/bin".format(self.root))
+        self.storage = Path("{}/storage".format(self.root))
         logger.info("Root dir is: {}".format(self.root))
         logger.info("Bin dir is: {}".format(self.bin))
 

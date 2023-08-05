@@ -166,3 +166,4 @@ cython_debug/
 !default.ini
 *.json
 !default.json
+!pyrightconfig.json

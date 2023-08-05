@@ -9,6 +9,7 @@ from common.logger import setup_logger
 from common.config import Config
 from common.workdir import Workdir
 from common.prepare_activate import prepare_activate
+from installers.python_venv import PythonVenv
 from installers.ansible import Ansible
 from installers.vault import Vault
 from installers.terraform import Terraform
@@ -53,8 +54,12 @@ def run(args):
 
         logger.info("Install ...")
 
+        python_venv = PythonVenv()
+        print("\n")
+        python_venv.install()
+
         if config.ansible_enabled:
-            ansible = Ansible(workdir)
+            ansible = Ansible()
             print("\n")
             ansible.install()
         else:

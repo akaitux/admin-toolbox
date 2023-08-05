@@ -82,6 +82,12 @@ deactivate () {
         unset _OLD_KUBECONFIG
     fi
 
+    if ! [ -z "${_OLD_VIRTUALENVWRAPPER_PYTHON+_}" ] ; then
+        VIRTUALENVWRAPPER_PYTHON="$_OLD_VIRTUALENVWRAPPER_PYTHON"
+        export VIRTUALENVWRAPPER_PYTHON
+        unset _OLD_VIRTUALENVWRAPPER_PYTHON
+    fi
+
     # This should detect bash and zsh, which have a hash command that must
     # be called to get it to forget past commands.  Without forgetting
     # past commands the $PATH changes we made may not be respected
@@ -123,6 +129,7 @@ deactivate () {
     fi
     unset _OLD_SSH_ALIAS
 
+
     unset ANSIBLE_PATH
     unset ANSIBLE_PYTHON
     unalias vlg 2>/dev/null
@@ -140,20 +147,30 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-_OLD_ANSIBLE_CONFIG="$ANSIBLE_CONFIG"
-ANSIBLE_CONFIG="<ANSIBLE_CONFIG>"
-export ANSIBLE_CONFIG
-
-# For consul discovery
-ANSIBLE_PYTHON="<WORKDIR_ANSIBLE>venv/bin/python"
-export ANSIBLE_PYTHON
 
 _OLD_VIRTUAL_PATH="$PATH"
-PATH="<WORKDIR_BIN>:<WORKDIR_BIN>/ansible:$PATH"
-export PATH
 
-ANSIBLE_PATH="<ANSIBLE_PATH>"
-export ANSIBLE_PATH
+
+_OLD_PYTHON_WRAPPER="$VIRTUALENVWRAPPER_PYTHON"
+VIRTUALENVWRAPPER_PYTHON="<PYTHON_VENV>/bin/python3"
+export VIRTUALENVWRAPPER_PYTHON
+PATH="<PYTHON_VENV>/bin:$PATH"
+
+
+if [ "<ANSIBLE_ENABLED>" ]; then
+    _OLD_ANSIBLE_CONFIG="$ANSIBLE_CONFIG"
+    ANSIBLE_CONFIG="<ANSIBLE_CONFIG>"
+    export ANSIBLE_CONFIG
+
+    ANSIBLE_PATH="<ANSIBLE_PATH>"
+    export ANSIBLE_PATH
+    ANSIBLE_PYTHON="<WORKDIR_ANSIBLE>/venv/bin/python"
+    export ANSIBLE_PYTHON
+
+    PATH="<WORKDIR_BIN>:<WORKDIR_BIN>/ansible:$PATH"
+    export PATH
+fi
+
 
 _OLD_VAULT_ADDR="$VAULT_ADDR"
 VAULT_ADDR="<VAULT_ADDR>"
