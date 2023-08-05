@@ -1,3 +1,4 @@
+from typing import Optional
 from common.config import get_config, Config
 from common.logger import logger
 import shutil
@@ -8,22 +9,24 @@ import sys
 
 
 class PythonVenv:
-    def __init__(self):
+    def __init__(self, workdir: Optional[Path] = None):
         self.config: Config = get_config()
         self.enabled = self.config.python_enabled
-        self.workdir = self.config.workdir.root / "python"
-        self.venv = self.workdir / "venv"
-        self.packages = self.config.python_packages
+        self.workdir = Path()
+        self.is_standalone = False
+        if workdir:
+            self.workdir = workdir
+        else:
+            self.workdir = self.config.workdir.root / 'python'
+            self.is_standalone = True
+        self.venv = self.workdir / 'venv'
         self.workdir_root_bin = self.config.workdir.bin
 
     def install(self):
-        logger.info('Install python venv ...')
         self._prepare_dirs()
         self._create_venv()
-        self.install_packages(self.packages)
-        logger.info('Install python venv installed')
-
-
+        if self.is_standalone:
+            self.install_packages(self.config.python_packages)
 
     def _prepare_dirs(self):
         if self.workdir.exists():

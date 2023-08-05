@@ -30,7 +30,7 @@ class Config(metaclass=Singleton):
         self.toolbox_repo_dir = toolbox_repo_dir
 
         self.templates_path = self.toolbox_repo_dir / 'templates/'
-        self.activate_tpl_path = self.templates_path / 'activate/'
+        self.activate_tpl_path = self.templates_path / 'activate.sh'
         self.activate_path = self.workdir.root / 'activate'
 
         self.platform = ""
