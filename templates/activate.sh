@@ -23,7 +23,9 @@ run_ssh_agent () {
     out=$(eval $SSH_AGENT_CMD_RUN)
     local pid=$(echo $out | grep -oP "SSH_AGENT_PID=\K([[:digit:]]+)")
     echo $pid > $SSH_AGENT_PID_PATH
-    SSH_AUTH_SOCK=$SSH_AGENT_SOCK /usr/bin/ssh -o 'ForwardAgent yes' $SSH_LOAD_KEYS_FROM_HOST "ssh-add 2>&1 > /dev/null" >/dev/null
+    if [ "$SSH_LOAD_KEYS_FROM_HOST" ]; then
+        SSH_AUTH_SOCK=$SSH_AGENT_SOCK /usr/bin/ssh -o 'ForwardAgent yes' $SSH_LOAD_KEYS_FROM_HOST "ssh-add 2>&1 > /dev/null" >/dev/null
+    fi
 }
 
 stop_ssh_agent () {

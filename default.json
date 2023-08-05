@@ -1,14 +1,13 @@
 {
     "ansible": {
-        "enabled": true,
+        "enabled": false,
         "repo_url": "",
         "repo_path": ""
     },
 
-    "ssh_bastion": {
-        "enabled": true,
-        "user": "",
-        "host": ""
+    "ssh": {
+        "enabled": false,
+        "load_keys_from_host": ""
     },
 
     "vault": {
@@ -52,8 +51,8 @@
 
     },
     "gron": {
-        "enabled": true,
-        "repo_url": "git@gitlab.zxz.su:/dit/tools/gron"
+        "enabled": false,
+        "repo_url": ""
 
     },
     "helm": {
