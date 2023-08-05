@@ -35,7 +35,7 @@ def run(args):
         toolbox_name=args.toolbox_name,
         toolbox_repo_dir=current_exec_dir_path,
         workdir=workdir,
-        config_ini_path=args.config,
+        config_path=args.config,
     )
 
     if args.info:
@@ -47,6 +47,7 @@ def run(args):
     validate_platform()
 
     installers = [
+        SSH(),
         PythonVenv(),
         Vault(),
         Ansible(),
@@ -58,7 +59,6 @@ def run(args):
         Gron(),
         Helm(),
         ArgoCD(),
-        SSH(),
     ]
 
     activate_replaces = {}

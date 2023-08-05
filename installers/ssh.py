@@ -2,6 +2,7 @@ from common.config import get_config
 from pathlib import Path
 import subprocess
 import os
+from common.logger import logger
 
 from installers.installer import Installer
 
@@ -14,10 +15,24 @@ class SSH(Installer):
         self.workdir = self._config.workdir.root
         self.dir = self.workdir / "ssh"
         self.config_path = self.dir / "config"
-        self.user = self._config.ssh_user
-        self.host = self._config.ssh_host
+        self.load_keys_from_host = self._config.ssh_load_keys_from_host
         self.agent_socket = self.dir / "agent.socket"
         self.agent_pid_file = self.dir / "agent.pid"
+        self.additional_config = self._load_additional_config()
+
+    def _load_additional_config(self) -> str:
+        config_dir = self._config.config_path.parents[0]
+        # config.json -> config.ssh
+        ssh_config_name = self._config.config_path.name.split('.')[0] + '.ssh'
+        ssh_config_path = Path(config_dir / ssh_config_name)
+        if not ssh_config_path.exists():
+            logger.debug("No ssh additional config")
+            return ""
+        logger.debug("SSH: Read additional config {}".format(ssh_config_path))
+        with open(ssh_config_path, 'r') as f:
+            config = f.read()
+            config = config.replace('<IDENTITY_AGENT>', str(self.agent_socket))
+            return config
 
     def install(self):
         Path(self.dir).mkdir(exist_ok=True)
@@ -35,17 +50,14 @@ class SSH(Installer):
         replaces["<SSH_AGENT_CMD_RUN>"] = run_cmd
         replaces["<SSH_AGENT_PID_PATH>"] = str(self.agent_pid_file)
         replaces["<SSH_AGENT_SOCK>"] = str(self.agent_socket)
-        replaces["<SSH_HOST>"] = str(self.host)
+        replaces["<SSH_LOAD_KEYS_FROM_HOST>"] = str(self.load_keys_from_host)
         return replaces
 
     def _create_config(self):
-        config = "HOST *\n"
-        config += "\tAddKeysToAgent yes\n"
-        config += "\tForwardAgent yes\n"
+        config = ""
+        if self.additional_config:
+            config = self.additional_config
 
-        config += "\tIdentityAgent {}".format(self.agent_socket)
-        if self.user:
-            config += "\n\tUser {}".format(self.user)
         with open(self.config_path, "w") as f:
             f.write(config)
 

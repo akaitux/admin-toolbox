@@ -167,3 +167,4 @@ cython_debug/
 *.json
 !default.json
 !pyrightconfig.json
+*.ssh

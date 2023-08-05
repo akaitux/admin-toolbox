@@ -16,11 +16,11 @@ class Config(metaclass=Singleton):
             toolbox_name: str,
             toolbox_repo_dir: Path,
             workdir: Workdir,
-            config_ini_path: Path,
+            config_path: Path,
         ):
 
         self.toolbox_name = toolbox_name
-        self.config_path = Path(config_ini_path).expanduser().resolve()
+        self.config_path = Path(config_path).expanduser().resolve()
 
         if not toolbox_repo_dir:
             return
@@ -86,7 +86,7 @@ class Config(metaclass=Singleton):
 
         self.ssh_enabled = False
         self.ssh_user = ""
-        self.ssh_host = ""
+        self.ssh_load_keys_from_host = ""
 
         self._parse_config()
 
@@ -274,7 +274,7 @@ class Config(metaclass=Singleton):
             return
         self.ssh_enabled = True
         self.ssh_user = section_cfg.get("user", "")
-        self.ssh_host = section_cfg.get("host", "")
+        self.ssh_load_keys_from_host = section_cfg.get("load_keys_from_host", "")
 
 
 
