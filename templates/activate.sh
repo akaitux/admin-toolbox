@@ -6,6 +6,37 @@ if [ "${BASH_SOURCE-}" = "$0" ]; then
     exit 33
 fi
 
+ssh_ansible_autocomplete () {
+    SSH_CONFIG="<SSH_CONFIG>"
+    hosts=""
+    if [[ -r ~/.ssh/config ]]; then
+        hosts=($hosts $(awk 'match($0, /^Host \s*([^*]\w+)/, a) {s = s a[1] " "} END {print s}' ~/.ssh/config))
+    fi
+    if [[ -r $SSH_CONFIG ]]; then
+        hosts=($hosts $(awk 'match($0, /^Host \s*([^*]\w+)/, a) {s = s a[1] " "} END {print s}' $SSH_CONFIG))
+    fi
+    if [[ -r ~/.ssh/known_hosts ]]; then
+        hosts=($hosts $(awk 'match($0, /^([^|][a-z.0-9]+) /, a) {s = s a[0] " "} END {print s}' ~/.ssh/known_hosts))
+    fi
+    hosts=($hosts $(get_hosts_from_ansible))
+    current_shell=$(ps -o comm= -p $$)
+    if [ "$current_shell" = "zsh" ]; then
+        _ssh_autocomplete_zsh "${hosts}"
+    fi
+}
+
+get_hosts_from_ansible () {
+    ansible all --list-hosts | tail -n +2 | awk '{s = s $1 " "} END {print s}'
+}
+
+_ssh_autocomplete_zsh () {
+    zstyle ':completion:*:(ssh|scp|sftp):*' hosts $(print "$1")
+}
+
+_ssh_autocomplete_zsh_deactivate () {
+    zstyle ':completion:*:(ssh|scp|sftp):*' hosts
+}
+
 run_ssh_agent () {
     local SSH_AGENT_PID_PATH="<SSH_AGENT_PID_PATH>"
     local SSH_AGENT_CMD_RUN="<SSH_AGENT_CMD_RUN>"
@@ -124,6 +155,7 @@ deactivate_ssh() {
     fi
     unset _OLD_SSH_ALIAS
     stop_ssh_agent
+    _ssh_autocomplete_zsh_deactivate
 }
 
 deactivate_additional_aliases () {
@@ -264,11 +296,17 @@ activate_argocd () {
 
 activate_ssh () {
     _OLD_SSH_ALIAS=$(alias ssh)
+    local SSH_ENABLED="<SSH_ENABLED>"
+    local SSH_ENABLE_AUTOCOMPLETE_FROM_ANSIBLE="<SSH_ENABLE_AUTOCOMPLETE_FROM_ANSIBLE>"
 
-    if [ "<SSH_ENABLED>" ]; then
+    if [ "$SSH_ENABLED" ]; then
         alias <SSH_ALIAS>
     fi
     run_ssh_agent
+
+    if [ "$SSH_ENABLE_AUTOCOMPLETE_FROM_ANSIBLE" ]; then
+        ssh_ansible_autocomplete
+    fi
 }
 
 activate_gcloud () {

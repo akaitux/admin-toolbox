@@ -18,6 +18,7 @@ class SSH(Installer):
         self.load_keys_from_host = self._config.ssh_load_keys_from_host
         self.agent_socket = self.dir / "agent.socket"
         self.agent_pid_file = self.dir / "agent.pid"
+        self.enable_autocomplete_from_ansible = self._config.ssh_enable_autocomplete_from_ansible
         self.additional_config = self._load_additional_config()
 
     def _load_additional_config(self) -> str:
@@ -40,10 +41,17 @@ class SSH(Installer):
 
     def make_activate_replaces(self) -> dict:
         replaces = {}
+
         if self.enabled:
             replaces['<SSH_ENABLED>'] = "true"
         else:
             replaces['<SSH_ENABLED>'] = ""
+
+        if self.enable_autocomplete_from_ansible:
+            replaces["<SSH_ENABLE_AUTOCOMPLETE_FROM_ANSIBLE>"] = "true"
+        else:
+            replaces["<SSH_ENABLE_AUTOCOMPLETE_FROM_ANSIBLE>"] = ""
+
         alias = "ssh='ssh -F {}'".format(self.config_path)
         replaces["<SSH_ALIAS>"] = alias
         run_cmd = ' '.join([str(x) for x in self.generate_run_agent_cmd()])
@@ -51,6 +59,7 @@ class SSH(Installer):
         replaces["<SSH_AGENT_PID_PATH>"] = str(self.agent_pid_file)
         replaces["<SSH_AGENT_SOCK>"] = str(self.agent_socket)
         replaces["<SSH_LOAD_KEYS_FROM_HOST>"] = str(self.load_keys_from_host)
+        replaces["<SSH_CONFIG>"] = str(self.config_path)
         return replaces
 
     def _create_config(self):

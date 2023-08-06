@@ -88,6 +88,7 @@ class Config(metaclass=Singleton):
         self.ssh_enabled = False
         self.ssh_user = ""
         self.ssh_load_keys_from_host = ""
+        self.ssh_enable_autocomplete_from_ansible = False
 
         self._parse_config()
 
@@ -277,6 +278,7 @@ class Config(metaclass=Singleton):
         self.ssh_enabled = True
         self.ssh_user = section_cfg.get("user", "")
         self.ssh_load_keys_from_host = section_cfg.get("load_keys_from_host", "")
+        self.ssh_enable_autocomplete_from_ansible = section_cfg.get("enable_autocomplete_from_ansible", "")
 
 
 
