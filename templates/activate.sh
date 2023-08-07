@@ -241,9 +241,9 @@ activate_ansible () {
 
 activate_vault () {
     _OLD_VAULT_ADDR="$VAULT_ADDR"
-    local VAULT_ADDR="<VAULT_ADDR>"
+    VAULT_ADDR="<VAULT_ADDR>"
     local VAULT_IS_LOAD_ENV_VARS="<VAULT_IS_LOAD_ENV_VARS>"
-    local VAULT_LOGIN_METHOD="<VAULT_LOGIN_METHOD>"
+    VAULT_LOGIN_METHOD="<VAULT_LOGIN_METHOD>"
 
     _OLD_VAULT_TOKEN="$VAULT_TOKEN"
     VAULT_TOKEN=""
@@ -253,6 +253,7 @@ activate_vault () {
 
     export VAULT_ADDR
     export VAULT_TOKEN
+    export VAULT_LOGIN_METHOD
 
     if [ "$VAULT_IS_LOAD_ENV_VARS" ]; then
         is_loggedin=$(vault token lookup >/dev/null 2>&1 ; echo $?)
