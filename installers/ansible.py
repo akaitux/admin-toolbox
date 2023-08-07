@@ -118,25 +118,26 @@ class Ansible(Installer):
             )
         requirements = self.repo.joinpath("requirements.txt")
         logger.debug('Install ansible requirements')
-        try:
-            subprocess.run(
-                [
-                    '{}/bin/pip'.format(self.venv),
-                    '--disable-pip-version-check',
-                    'install',
-                    '-r',
-                   requirements,
-                ],
-                check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-            )
-        except subprocess.CalledProcessError as exc:
-            logger.error(
-                "Error while install ansible requirements",
-            )
-            logger.error(exc.stdout)
-            sys.exit(1)
+        if requirements.exists():
+            try:
+                subprocess.run(
+                    [
+                        '{}/bin/pip'.format(self.venv),
+                        '--disable-pip-version-check',
+                        'install',
+                        '-r',
+                       requirements,
+                    ],
+                    check=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                )
+            except subprocess.CalledProcessError as exc:
+                logger.error(
+                    "Error while install ansible requirements",
+                )
+                logger.error(exc.stdout)
+                sys.exit(1)
 
     def _create_bin_links(self):
         bin_files = [
