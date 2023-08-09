@@ -34,7 +34,9 @@ _ssh_autocomplete_zsh () {
 }
 
 _ssh_autocomplete_zsh_deactivate () {
-    zstyle ':completion:*:(ssh|scp|sftp):*' hosts
+    if [ "$current_shell" = "zsh" ]; then
+        zstyle ':completion:*:(ssh|scp|sftp):*' hosts
+    fi
 }
 
 run_ssh_agent () {
@@ -235,7 +237,7 @@ activate_ansible () {
 
     alias ans='cd $ANSIBLE_PATH'
     # variable for use in cd, for exam. cd $ans/some_dir
-    ans='$ANSIBLE_PATH'
+    ans='<ANSIBLE_PATH>'
     export ans
 }
 
@@ -255,6 +257,16 @@ activate_vault () {
     export VAULT_TOKEN
     export VAULT_LOGIN_METHOD
 
+    alias vault-login='
+        f(){
+            VAULT_TOKEN=$(vault login -method=$VAULT_LOGIN_METHOD -token-only username=$1)
+            echo -n "$VAULT_TOKEN" > $WORKDIR_ROOT/vault_token;
+            export VAULT_TOKEN
+            unset -f f
+        };
+        f'
+    alias vault-logout='rm -f <WORKDIR_ROOT>/vault_token; unset VAULT_TOKEN'
+
     if [ "$VAULT_IS_LOAD_ENV_VARS" ]; then
         is_loggedin=$(vault token lookup >/dev/null 2>&1 ; echo $?)
         if [ "$is_loggedin" != "0" ]; then
@@ -266,15 +278,6 @@ activate_vault () {
     <VAULT_LOAD_ENV_VARS>
     fi
 
-    alias vault-login='
-        f(){
-            VAULT_TOKEN=$(vault login -method=$VAULT_LOGIN_METHOD -token-only username=$1)
-            echo -n "$VAULT_TOKEN" > $WORKDIR_ROOT/vault_token;
-            export VAULT_TOKEN
-            unset -f f
-        };
-        f'
-    alias vault-logout='rm -f <WORKDIR_ROOT>/vault_token; unset VAULT_TOKEN'
 }
 
 activate_terra () {
@@ -346,9 +349,9 @@ TOOLBOX_NAME="<TOOLBOX_NAME>"
 _OLD_VIRTUAL_PATH="$PATH"
 PATH="$WORKDIR_BIN:$PATH"
 
+activate_vault
 activate_python_venv
 activate_ansible
-activate_vault
 activate_terra
 activate_argocd
 activate_ssh

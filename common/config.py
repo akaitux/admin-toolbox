@@ -79,6 +79,7 @@ class Config(metaclass=Singleton):
         self._ansible_repo_path_file = self.workdir.root / '.ansible_path'
         self.ansible_cfg_path = ""
         self.ansible_use_ssh_agent = False
+        self.ansible_use_python_venv_for_localhost_delegation = False
 
         self.argocd_enabled = False
 
@@ -249,6 +250,10 @@ class Config(metaclass=Singleton):
         self.ansible_venv_packages = section_cfg.get("venv_packages", [])
         self.ansible_repo_url = section_cfg.get("repo_url", "")
         self.ansible_use_ssh_agent = section_cfg.get("use_ssh_agent", False)
+        self.ansible_use_venv_for_localhost_delegation = section_cfg.get(
+            "use_venv_for_localhost_delegation",
+            False,
+        )
         ansible_repo_path = section_cfg.get("repo_path", "")
         if ansible_repo_path:
             self.ansible_repo_path = Path(ansible_repo_path).expanduser().resolve()
