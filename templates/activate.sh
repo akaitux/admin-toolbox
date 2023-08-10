@@ -65,7 +65,7 @@ stop_ssh_agent () {
     local SSH_AGENT_CMD_RUN="<SSH_AGENT_CMD_RUN>"
     local SSH_AGENT_PID_PATH="<SSH_AGENT_PID_PATH>"
     local SSH_AGENT_SOCK="<SSH_AGENT_SOCK>"
-    ps aux | grep "$SSH_AGENT_CMD_RUN" | head -n -1 | awk '{print $2}' | xargs -I {} kill -9 {}
+    ps aux | grep "$SSH_AGENT_CMD_RUN" | grep -v grep | head -n -1 | awk '{print $2}' | xargs -I {} kill -9 {}
     rm -f $SSH_AGENT_PID_PATH
     rm -f $SSH_AGENT_SOCK
 }
