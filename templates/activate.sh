@@ -23,7 +23,27 @@ ssh_ansible_autocomplete () {
     if [ "$current_shell" = "zsh" ]; then
         _ssh_autocomplete_zsh "${hosts}"
     fi
+    if [ "$current_shell" = "bash" ]; then
+        _ssh_autocomplete_bash "${hosts[*]}"
+    fi
+
 }
+
+_ssh_autocomplete_bash() {
+    _hosts="$1"
+    _ssh() {
+        local cur prev opts
+        COMPREPLY=()
+        cur="${COMP_WORDS[COMP_CWORD]}"
+        prev="${COMP_WORDS[COMP_CWORD-1]}"
+        opts="$_hosts"
+
+        COMPREPLY=( $(compgen -W "$opts" -- ${cur}) )
+        return 0
+    }
+    complete -F _ssh ssh
+}
+
 
 get_hosts_from_ansible () {
     ansible all --list-hosts | tail -n +2 | awk '{s = s $1 " "} END {print s}'
@@ -36,6 +56,12 @@ _ssh_autocomplete_zsh () {
 _ssh_autocomplete_zsh_deactivate () {
     if [ "$current_shell" = "zsh" ]; then
         zstyle ':completion:*:(ssh|scp|sftp):*' hosts
+    fi
+}
+
+_ssh_autocomplete_bash_deactivate () {
+    if [ "$current_shell" = "bash" ]; then
+        complete -r ssh
     fi
 }
 
@@ -158,6 +184,7 @@ deactivate_ssh() {
     unset _OLD_SSH_ALIAS
     stop_ssh_agent
     _ssh_autocomplete_zsh_deactivate
+    _ssh_autocomplete_bash_deactivate
 }
 
 deactivate_additional_aliases () {
@@ -283,8 +310,8 @@ activate_vault () {
 }
 
 activate_terra () {
-    _OLD_TERRAFORM_ALIAS=$(alias terraform)
-    _OLD_TERRAGRUNT_ALIAS=$(alias terragrunt)
+    _OLD_TERRAFORM_ALIAS=$(alias terraform 2>/dev/null)
+    _OLD_TERRAGRUNT_ALIAS=$(alias terragrunt 2>/dev/null)
     local TERRAFORM_ENABLED="<TERRAFORM_ENABLED>"
     local TERRAGRUNT_ENABLED="<TERRAGRUNT_ENABLED>"
     if [ "$TERRAFORM_ENABLED" ]; then
@@ -296,12 +323,12 @@ activate_terra () {
 }
 
 activate_argocd () {
-    _OLD_ARGOCD_ALIAS=$(alias argocd)
+    _OLD_ARGOCD_ALIAS=$(alias argocd 2>/dev/null)
     alias <ALIAS_ARGOCD>
 }
 
 activate_ssh () {
-    _OLD_SSH_ALIAS=$(alias ssh)
+    _OLD_SSH_ALIAS=$(alias ssh 2>/dev/null)
     local SSH_ENABLED="<SSH_ENABLED>"
     local SSH_ENABLE_AUTOCOMPLETE_FROM_ANSIBLE="<SSH_ENABLE_AUTOCOMPLETE_FROM_ANSIBLE>"
 
