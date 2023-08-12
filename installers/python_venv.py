@@ -22,12 +22,13 @@ class PythonVenv(Installer):
         else:
             self.workdir = self._config.workdir.root / 'python'
             self.is_standalone = True
-        self.venv = self.workdir / 'venv'
+        self.venv_path = self.workdir
+        self.bin_path = self.venv_path / 'bin'
         self.workdir_root_bin = self._config.workdir.bin
 
     def install(self):
         self._prepare_dirs()
-        self._create_venv(force=True)
+        self.create_venv(force=True)
         if self.is_standalone:
             self.install_packages(self._config.python_packages)
 
@@ -37,16 +38,16 @@ class PythonVenv(Installer):
             replaces["<PYTHON_VENV_ENABLED>"] = ""
         else:
             replaces["<PYTHON_VENV_ENABLED>"] = "true"
-        replaces["<PYTHON_VENV>"] = str(self.venv)
+        replaces["<PYTHON_VENV>"] = str(self.venv_path)
         return replaces
 
     def _prepare_dirs(self):
         self.workdir.mkdir(exist_ok=True)
 
     def _is_venv_valid(self):
-        if not self.venv.exists():
+        if not self.venv_path.exists():
             return False
-        pip_bin = self.venv / 'bin/pip'
+        pip_bin = self.venv_path / 'bin/pip'
         try:
             p = subprocess.run(
                 [str(pip_bin), '-h'],
@@ -63,17 +64,17 @@ class PythonVenv(Installer):
             return False
         return False
 
-    def _create_venv(self, force=False):
-        if not force and self.venv.exists():
+    def create_venv(self, force=False):
+        if not force and self.venv_path.exists():
             if not self._is_venv_valid():
-                shutil.rmtree(self.venv)
+                shutil.rmtree(self.venv_path)
             else:
-                logger.debug("Python venv {} already exists and OK".format(self.venv))
-        elif force and os.path.exists(self.venv):
-            shutil.rmtree(self.venv)
+                logger.debug("Python venv {} already exists and OK".format(self.venv_path))
+        elif force and os.path.exists(self.venv_path):
+            shutil.rmtree(self.venv_path)
         try:
             p = subprocess.run(
-                ['virtualenv', '-p', 'python3', str(self.venv)],
+                ['virtualenv', '-p', 'python3', str(self.venv_path)],
                 check=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -94,7 +95,7 @@ class PythonVenv(Installer):
             try:
                 p = subprocess.run(
                     [
-                        str(self.venv / 'bin/pip'),
+                        str(self.venv_path / 'bin/pip'),
                         'install',
                         '--disable-pip-version-check',
                         package
@@ -117,7 +118,7 @@ class PythonVenv(Installer):
         try:
             subprocess.run(
                 [
-                    '{}/bin/pip'.format(self.venv),
+                    '{}/bin/pip'.format(self.venv_path),
                     '--disable-pip-version-check',
                     'install',
                     '-r',
