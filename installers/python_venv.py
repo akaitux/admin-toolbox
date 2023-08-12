@@ -1,3 +1,4 @@
+import traceback
 from typing import Optional
 from common.config import get_config, Config
 from common.logger import logger
@@ -26,7 +27,7 @@ class PythonVenv(Installer):
 
     def install(self):
         self._prepare_dirs()
-        self._create_venv()
+        self._create_venv(force=True)
         if self.is_standalone:
             self.install_packages(self._config.python_packages)
 
@@ -40,14 +41,34 @@ class PythonVenv(Installer):
         return replaces
 
     def _prepare_dirs(self):
-        if self.workdir.exists():
-            shutil.rmtree(self.workdir)
-        self.workdir.mkdir()
+        self.workdir.mkdir(exist_ok=True)
+
+    def _is_venv_valid(self):
+        if not self.venv.exists():
+            return False
+        pip_bin = self.venv / 'bin/pip'
+        try:
+            p = subprocess.run(
+                [str(pip_bin), '-h'],
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            )
+            if p.stderr:
+                logger.debug(p.stderr.decode("utf-8"))
+            if p.returncode == 0:
+                return True
+        except:
+            logger.debug(traceback.format_exc())
+            return False
+        return False
 
     def _create_venv(self, force=False):
         if not force and self.venv.exists():
-            logger.debug('ansible venv exists')
-            return
+            if not self._is_venv_valid():
+                shutil.rmtree(self.venv)
+            else:
+                logger.debug("Python venv {} already exists and OK".format(self.venv))
         elif force and os.path.exists(self.venv):
             shutil.rmtree(self.venv)
         try:
