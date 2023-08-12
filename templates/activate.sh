@@ -48,7 +48,7 @@ run_ssh_agent () {
         pid=$(cat "$SSH_AGENT_PID_PATH")
         echo $pid
         if ps -p $pid > /dev/null; then
-            echo "SSH Bastion: ssh agent already running"
+            echo "SSH: ssh agent already running"
             return
         fi
     fi
@@ -257,14 +257,16 @@ activate_vault () {
     export VAULT_TOKEN
     export VAULT_LOGIN_METHOD
 
-    alias vault-login='
-        f(){
-            VAULT_TOKEN=$(vault login -method=$VAULT_LOGIN_METHOD -token-only username=$1)
-            echo -n "$VAULT_TOKEN" > $WORKDIR_ROOT/vault_token;
-            export VAULT_TOKEN
-            unset -f f
-        };
-        f'
+    vault_login='
+    f(){
+        VAULT_TOKEN=$(vault login -method=$VAULT_LOGIN_METHOD -token-only username=$1)
+        echo -n "$VAULT_TOKEN" > $WORKDIR_ROOT/vault_token;
+        export VAULT_TOKEN
+        unset -f f
+    };
+    f'
+    alias vault-login="$vault_login"
+
     alias vault-logout='rm -f <WORKDIR_ROOT>/vault_token; unset VAULT_TOKEN'
 
     if [ "$VAULT_IS_LOAD_ENV_VARS" ]; then
@@ -273,7 +275,7 @@ activate_vault () {
             echo "Login into vault"
             printf "Enter vault username: "
             read _vault_user
-            vault-login $_vault_user
+            eval $vault_login $_vault_user
         fi
     <VAULT_LOAD_ENV_VARS>
     fi
