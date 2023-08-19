@@ -79,7 +79,7 @@ class Terragrunt(Installer):
         logger.debug('Download terragrunt {} -> {}'.format(url, self.bin_path))
         if not download_file(url, self.bin_path, self._config.proxies):
             sys.exit(1)
-        os.chmod(self.bin_path, 0o550)
+        os.chmod(self.bin_path, 0o650)
 
 
 
