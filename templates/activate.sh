@@ -6,6 +6,26 @@ if [ "${BASH_SOURCE-}" = "$0" ]; then
     exit 33
 fi
 
+activate_env_files () {
+    local env_dir="${WORKDIR_ROOT}/env"
+    if [ -d "$env_dir" ]; then
+        for f in $(ls -1 "${env_dir}"); do
+            source "${env_dir}/${f}"
+        done
+    fi
+}
+
+deactivate_env_files () {
+    local env_dir="${WORKDIR_ROOT}/env"
+    if [ -d "$env_dir" ]; then
+        for f in $(ls -1 "${env_dir}"); do
+            while read p; do
+               echo $p | unset $(sed "s%export \([^=]\+\).*$%\1%")
+            done < "${env_dir}${f}"
+        done
+    fi
+}
+
 ssh_ansible_autocomplete () {
     SSH_CONFIG="<SSH_CONFIG>"
     hosts=""
@@ -378,6 +398,7 @@ TOOLBOX_NAME="<TOOLBOX_NAME>"
 _OLD_VIRTUAL_PATH="$PATH"
 PATH="$WORKDIR_BIN:$PATH"
 
+activate_env_files
 activate_vault
 activate_python_venv
 activate_ansible
