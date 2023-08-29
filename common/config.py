@@ -79,7 +79,7 @@ class Config(metaclass=Singleton):
         self._ansible_repo_path_file = self.workdir.root / '.ansible_path'
         self.ansible_cfg_path = ""
         self.ansible_use_ssh_agent = False
-        self.ansible_use_python_venv_for_localhost_delegation = False
+        self.ansible_use_venv_for_localhost_delegation = False
 
         self.argocd_enabled = False
 

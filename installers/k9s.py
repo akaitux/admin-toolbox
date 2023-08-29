@@ -62,10 +62,15 @@ class K9S(Installer):
             sys.exit(1)
 
     def _download(self):
+        ver = self.desired_ver.split(".")
+        arch = "amd64"
+        if len(ver) == 3:
+            if int(ver[0]) == 0 and int(ver[1]) <= 26:
+                arch = "x86_64"
         url = self.download_url.format(
             ver=self.desired_ver,
             os=self.desired_platform,
-            arch="x86_64",
+            arch=arch,
         )
         zip_arch = self.workdir.tmp / 'k9s.tar.gz'
 
