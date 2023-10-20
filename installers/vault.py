@@ -60,7 +60,7 @@ class Vault(Installer):
             if not p.stdout:
                 raise Exception("Vault stdout -v is empty")
             out = p.stdout.split(' ')
-            if len(out) != 3 or out[1][0] != 'v':
+            if out[1][0] != 'v':
                 raise Exception("Wrong vault output: {}".format(out))
             return out[1][1:] # v1.0.0[1:] -> 1.0.0
 
