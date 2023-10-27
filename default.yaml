@@ -1,4 +1,8 @@
 image: "ubuntu:22.04"
 additional_volumes:
-  - "~/.uma-devops-toolbox/kube:~/.kube"
-  - "~/.uma-devops-toolbox/.terraformrc:~/.terraformrc"
+  - "~/.devops-toolbox/kube:~/.kube"
+  - "~/.devops-toolbox/.terraformrc:~/.terraformrc"
+
+ssh_agent:
+  host: ""
+  key_path: ""

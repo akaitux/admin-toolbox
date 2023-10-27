@@ -5,6 +5,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type SSHAgent struct {
+    Host        string `yaml:"host"`
+    KeyPath     string `yaml:"key_path"`
+}
+
 type TConfig struct {
     AppVersion              string
     BuildDate               string
@@ -13,6 +18,7 @@ type TConfig struct {
     AdditionalVolumes       []string      `yaml:"additional_volumes"`
     CustomDockerfile        string        `yaml:"custom_dockerfile"`
     EntrypointScript        string        `yaml:"entrypoint_script"`
+    SSHAgent                SSHAgent      `yaml:"ssh_agent"`
 }
 
 
