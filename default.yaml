@@ -1,0 +1,4 @@
+image: "ubuntu:22.04"
+additional_volumes:
+  - "~/.uma-devops-toolbox/kube:~/.kube"
+  - "~/.uma-devops-toolbox/.terraformrc:~/.terraformrc"
