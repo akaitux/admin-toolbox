@@ -20,8 +20,8 @@ var cliArgs tCliArgs;
 
 func Execute(appVersion string, buildDate string) {
 	rootCmd.PersistentFlags().StringVarP(&cliArgs.configPath, "config", "c", "", "path to config file")
-	rootCmd.PersistentFlags().StringVarP(&cliArgs.configPath, "uid", "u", "", "run with custom uid")
-	rootCmd.PersistentFlags().BoolVarP(&cliArgs.logDebug, "debug", "d", false, "debug")
+	rootCmd.PersistentFlags().StringVarP(&cliArgs.configPath, "uid", "u", "", "run with custom uid. Needs for run with sudo")
+	rootCmd.PersistentFlags().BoolVarP(&cliArgs.logDebug, "debug", "d", false, "debug log")
 	rootCmd.PersistentFlags().BoolVarP(&cliArgs.showVersion, "version", "", false, "version information")
 
 
