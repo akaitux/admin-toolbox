@@ -5,5 +5,5 @@ import (
 )
 
 func Run() {
-    log.Error("HEY")
+    log.Errorf("%v", Config)
 }

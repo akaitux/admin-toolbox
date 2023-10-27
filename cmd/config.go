@@ -9,14 +9,10 @@ type TConfig struct {
     AppVersion              string
     BuildDate               string
 
-    Image                   string `yaml:"image"`
-    Workdir                 string `yaml:"workdir"`
-    ReplaceDotSSH           bool   `yaml:"replace_dot_ssh"`
-    ReplaceDotConfig        bool   `yaml:"replace_dot_config"`
-    ReplaceDotKube          bool   `yaml:"replace_dot_kube"`
-    AnsibleCfg              string `yaml:"ansible_cfg"`
-    CustomDockerfile        string `yaml:"custom_dockerfile"`
-    EntrypointScript        string `yaml:"entrypoint_script"`
+    Image                   string        `yaml:"image"`
+    AdditionalVolumes       []string      `yaml:"additional_volumes"`
+    CustomDockerfile        string        `yaml:"custom_dockerfile"`
+    EntrypointScript        string        `yaml:"entrypoint_script"`
 }
 
 
