@@ -1,0 +1,6 @@
+entrypoint: ["/bin/zsh"]
+home_volumes:
+  - '.admin-toolbox/.ssh:.ssh'
+
+env:
+  TEST: "HEY"

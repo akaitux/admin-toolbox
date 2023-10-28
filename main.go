@@ -7,8 +7,9 @@ import (
 var (
 	Version   = "dev"
 	BuildTime = "unknown"
+    ConfDir   = "/opt/admin-toolbox"
 )
 
 func main() {
-	cmd.Execute(Version, BuildTime)
+	cmd.Execute(Version, BuildTime, ConfDir)
 }

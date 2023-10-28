@@ -20,7 +20,7 @@ type tCliArgs struct {
 var cliArgs tCliArgs;
 
 
-func Execute(appVersion string, buildDate string) {
+func Execute(appVersion string, buildDate string, confDir string) {
 	rootCmd.PersistentFlags().StringVarP(&cliArgs.configPath, "config", "c", "", "path to config file")
 	rootCmd.PersistentFlags().StringVarP(&cliArgs.configPath, "uid", "u", "", "run with custom uid. Needs for run with sudo")
 	rootCmd.PersistentFlags().BoolVarP(&cliArgs.forcePullImage, "pull", "p", false, "force pull image")
@@ -30,6 +30,7 @@ func Execute(appVersion string, buildDate string) {
 
 	Config.AppVersion = appVersion
 	Config.BuildDate = buildDate
+    Config.ConfDir = confDir
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -56,7 +57,7 @@ var rootCmd = &cobra.Command{
             log.Error("-c argument required (no config path)")
             os.Exit(1)
         }
-        err := Config.LoadFromFile(cliArgs.configPath)
+        err := Config.Load(cliArgs.configPath)
         if err != nil {
             log.Errorf("Error while read config file '%s': %s", cliArgs.configPath, err)
             exit(1)

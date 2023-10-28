@@ -25,6 +25,10 @@ func Run() {
     }
 
     cont, err := containerCreate(cli)
+    if err != nil {
+        log.Errorf("Create container error: %s", err)
+        exit(1)
+    }
     waiter, err := cli.ContainerAttach(context.Background(), cont.ID, types.ContainerAttachOptions{
 		Stderr:	   true,
 		Stdout:	   true,
@@ -38,8 +42,8 @@ func Run() {
 
 	err = cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
 	if err != nil {
-		fmt.Println("Error Starting container: " + cont.ID)
-		panic(err)
+		log.Error("Error Starting container: " + cont.ID)
+        exit(1)
 	}
 
 	fd := int(os.Stdin.Fd())
@@ -83,14 +87,19 @@ func Run() {
 	}
 	fmt.Println("");
 
-	log.Debug("Ensuring Container Removal: " + cont.ID);
-	cli.ContainerRemove( context.Background(), cont.ID, types.ContainerRemoveOptions{
-		Force: true,
-	} )
+	// log.Debug("Ensuring Container Removal: " + cont.ID);
+	// cli.ContainerRemove( context.Background(), cont.ID, types.ContainerRemoveOptions{
+	// 	Force: true,
+	// } )
 }
 
 func containerCreate(cli *client.Client) (container.CreateResponse, error) {
     nilReturn := container.CreateResponse{}
+
+    if Config.Image == "" {
+        return nilReturn, fmt.Errorf("'image' is empty")
+    }
+
     cont, err := containerCreateNoPullFallback(cli)
     if err != nil {
         if !strings.Contains(err.Error()," No such image") {
@@ -118,6 +127,7 @@ func containerCreateNoPullFallback(cli *client.Client) (container.CreateResponse
 	labels["for_uid"] = usr.Uid
 
 	ContainerConfig := &container.Config{
+        User: fmt.Sprintf("%s:%s", usr.Uid, usr.Gid),
 		Image: Config.Image,
 		AttachStderr:true,
 		AttachStdin: true,
@@ -134,7 +144,6 @@ func containerCreateNoPullFallback(cli *client.Client) (container.CreateResponse
 		AutoRemove: true,
 	}
 
-    ContainerConfig.User = fmt.Sprintf("%s:%s", usr.Uid, usr.Gid)
     // Check the home dir exists before mounting it
     _, err = os.Stat(usr.HomeDir)
     if os.IsNotExist(err) {

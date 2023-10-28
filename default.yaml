@@ -3,9 +3,9 @@ additional_volumes:
   - "~/.devops-toolbox/kube:~/.kube"
   - "~/.devops-toolbox/.terraformrc:~/.terraformrc"
 
-custom_dockerfile: |
-  RUN apt-update; apt-get -y install neovim
-  USER 1000
 ssh_agent:
   host: ""
   key_path: ""
+
+user_config:
+  entrypoint: ["/bin/bash"]
