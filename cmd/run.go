@@ -137,6 +137,19 @@ func containerCreateNoPullFallback(cli *client.Client) (container.CreateResponse
 		Labels: labels,
 	}
 
+    if len(Config.userConfig.Entrypoint) != 0 {
+        ContainerConfig.Entrypoint = Config.userConfig.Cmd
+    }
+
+    if len(Config.userConfig.Cmd) != 0 {
+        ContainerConfig.Cmd = Config.userConfig.Cmd
+    }
+
+    if len(Config.userConfig.Env) != 0 {
+        ContainerConfig.Env = append(ContainerConfig.Env, Config.userConfig.Env...)
+    }
+
+
 	var emptyMountsSliceEntry []mount.Mount
 
 	HostConfig := &container.HostConfig{

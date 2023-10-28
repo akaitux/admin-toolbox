@@ -17,7 +17,7 @@ type SSHAgent struct {
 type TUserConfig struct {
     Cmd                     []string            `yaml:"cmd"`
     Entrypoint              []string            `yaml:"entrypoint"`
-    Env                     map[string]string   `yaml:"env"`
+    Env                     []string            `yaml:"env"`
     SSHAgent                SSHAgent            `yaml:"ssh_agent"`
     HomeVolumes             []string            `yaml:"home_volumes"`
 }
