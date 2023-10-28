@@ -1,4 +1,4 @@
-entrypoint: ["/bin/zsh"]
+entrypoint: ["/bin/bash"]
 home_volumes:
   - '.admin-toolbox/.ssh:.ssh'
 

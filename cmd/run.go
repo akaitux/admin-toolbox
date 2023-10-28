@@ -42,7 +42,7 @@ func Run() {
 
 	err = cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
 	if err != nil {
-		log.Error("Error Starting container: " + cont.ID)
+        log.Errorf("Error Starting container (%s): %s", cont.ID, err)
         exit(1)
 	}
 
@@ -138,7 +138,7 @@ func containerCreateNoPullFallback(cli *client.Client) (container.CreateResponse
 	}
 
     if len(Config.userConfig.Entrypoint) != 0 {
-        ContainerConfig.Entrypoint = Config.userConfig.Cmd
+        ContainerConfig.Entrypoint = Config.userConfig.Entrypoint
     }
 
     if len(Config.userConfig.Cmd) != 0 {
@@ -148,7 +148,6 @@ func containerCreateNoPullFallback(cli *client.Client) (container.CreateResponse
     if len(Config.userConfig.Env) != 0 {
         ContainerConfig.Env = append(ContainerConfig.Env, Config.userConfig.Env...)
     }
-
 
 	var emptyMountsSliceEntry []mount.Mount
 
