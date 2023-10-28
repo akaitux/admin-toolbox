@@ -29,69 +29,13 @@ func Run() {
         log.Errorf("Create container error: %s", err)
         exit(1)
     }
-    waiter, err := cli.ContainerAttach(context.Background(), cont.ID, types.ContainerAttachOptions{
-		Stderr:	   true,
-		Stdout:	   true,
-		Stdin:		true,
-		Stream:	   true,
-	})
 
-	// When TTY is ON, just copy stdout
-	// See: https://github.com/docker/cli/blob/70a00157f161b109be77cd4f30ce0662bfe8cc32/cli/command/container/hijack.go#L121-L130
-	go io.Copy(os.Stdout, waiter.Reader)
-
-	err = cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
-	if err != nil {
-        log.Errorf("Error Starting container (%s): %s", cont.ID, err)
+    if err := containerAttach(cli, &cont); err != nil {
+        log.Error(err)
         exit(1)
-	}
-
-	fd := int(os.Stdin.Fd())
-	var oldState *terminal.State
-	if terminal.IsTerminal(fd) {
-		oldState, err = terminal.MakeRaw(fd)
-		if err != nil {
-			log.Error("Terminal: make raw ERROR")
-            exit(1)
-		}
-
-		// Wrapper around Stdin for the container, to detect Ctrl+C (as we are in raw mode)
-		go func() {
-			consoleReader := bufio.NewReaderSize(os.Stdin, 1)
-			for {
-				input, _ := consoleReader.ReadByte()
-				// Ctrl-C = 3
-				if input == 3 {
-					log.Debug("Detected Ctrl+C, so telling docker to remove the container: " + cont.ID)
-					// cli.ContainerRemove( context.Background(), cont.ID, types.ContainerRemoveOptions{
-					// 	Force: true,
-					// } )
-				}
-				waiter.Conn.Write([]byte{input})
-		}
-		}()
-	}
-
-	statusCh, errCh := cli.ContainerWait(context.Background(), cont.ID, container.WaitConditionNotRunning)
-	select {
-	case err := <-errCh:
-		if err != nil {
-			panic(err)
-		}
-	case <-statusCh:
-	}
-
-	log.Debug("Restoring terminal");
-	if terminal.IsTerminal(fd) {
-		terminal.Restore(fd, oldState)
-	}
-	fmt.Println("");
-
-	// log.Debug("Ensuring Container Removal: " + cont.ID);
-	// cli.ContainerRemove( context.Background(), cont.ID, types.ContainerRemoveOptions{
-	// 	Force: true,
-	// } )
+    }
 }
+
 
 func containerCreate(cli *client.Client) (container.CreateResponse, error) {
     nilReturn := container.CreateResponse{}
@@ -213,4 +157,70 @@ func pullImage(cli *client.Client) error {
 	// } else {
 	// 	io.Copy(ioutil.Discard, r)
 	// }
+}
+
+func containerAttach(cli *client.Client, cont *container.CreateResponse) error {
+    waiter, err := cli.ContainerAttach(context.Background(), cont.ID, types.ContainerAttachOptions{
+		Stderr:	   true,
+		Stdout:	   true,
+		Stdin:		true,
+		Stream:	   true,
+	})
+
+	// When TTY is ON, just copy stdout
+	// See: https://github.com/docker/cli/blob/70a00157f161b109be77cd4f30ce0662bfe8cc32/cli/command/container/hijack.go#L121-L130
+	go io.Copy(os.Stdout, waiter.Reader)
+
+	err = cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
+	if err != nil {
+        log.Errorf("Error Starting container (%s): %s", cont.ID, err)
+        exit(1)
+	}
+
+	fd := int(os.Stdin.Fd())
+	var oldState *terminal.State
+	if terminal.IsTerminal(fd) {
+		oldState, err = terminal.MakeRaw(fd)
+		if err != nil {
+			log.Error("Terminal: make raw ERROR")
+            exit(1)
+		}
+
+		// Wrapper around Stdin for the container, to detect Ctrl+C (as we are in raw mode)
+		go func() {
+			consoleReader := bufio.NewReaderSize(os.Stdin, 1)
+			for {
+				input, _ := consoleReader.ReadByte()
+				// Ctrl-C = 3
+				if input == 3 {
+					log.Debug("Detected Ctrl+C, so telling docker to remove the container: " + cont.ID)
+					// cli.ContainerRemove( context.Background(), cont.ID, types.ContainerRemoveOptions{
+					// 	Force: true,
+					// } )
+				}
+				waiter.Conn.Write([]byte{input})
+		}
+		}()
+	}
+
+	statusCh, errCh := cli.ContainerWait(context.Background(), cont.ID, container.WaitConditionNotRunning)
+	select {
+	case err := <-errCh:
+		if err != nil {
+			panic(err)
+		}
+	case <-statusCh:
+	}
+
+	log.Debug("Restoring terminal");
+	if terminal.IsTerminal(fd) {
+		terminal.Restore(fd, oldState)
+	}
+	fmt.Println("");
+
+	// log.Debug("Ensuring Container Removal: " + cont.ID);
+	// cli.ContainerRemove( context.Background(), cont.ID, types.ContainerRemoveOptions{
+	// 	Force: true,
+	// } )
+    return nil
 }
