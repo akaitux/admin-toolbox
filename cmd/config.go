@@ -11,14 +11,16 @@ type SSHAgent struct {
 }
 
 type TConfig struct {
+    Name                    string
     AppVersion              string
     BuildDate               string
+    Workdir                 string
 
     Image                   string        `yaml:"image"`
     AdditionalVolumes       []string      `yaml:"additional_volumes"`
-    CustomDockerfile        string        `yaml:"custom_dockerfile"`
-    EntrypointScript        string        `yaml:"entrypoint_script"`
     SSHAgent                SSHAgent      `yaml:"ssh_agent"`
+    DefaultShell            string        `default:"/bin/bash" yaml:"default_shell"`
+    EntrypointScript        string        `yaml:"entrypoint_script"`
 }
 
 

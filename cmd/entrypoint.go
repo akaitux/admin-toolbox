@@ -3,6 +3,7 @@ package cmd
 import (
     "fmt"
     "os"
+    "strings"
 
     "github.com/spf13/cobra"
     log "github.com/sirupsen/logrus"
@@ -13,6 +14,7 @@ type tCliArgs struct {
     showVersion    bool
     logDebug       bool
     configPath     string
+    forcePullImage bool
 }
 
 var cliArgs tCliArgs;
@@ -21,6 +23,7 @@ var cliArgs tCliArgs;
 func Execute(appVersion string, buildDate string) {
 	rootCmd.PersistentFlags().StringVarP(&cliArgs.configPath, "config", "c", "", "path to config file")
 	rootCmd.PersistentFlags().StringVarP(&cliArgs.configPath, "uid", "u", "", "run with custom uid. Needs for run with sudo")
+	rootCmd.PersistentFlags().BoolVarP(&cliArgs.forcePullImage, "pull", "p", false, "force pull image")
 	rootCmd.PersistentFlags().BoolVarP(&cliArgs.logDebug, "debug", "d", false, "debug log")
 	rootCmd.PersistentFlags().BoolVarP(&cliArgs.showVersion, "version", "", false, "version information")
 
@@ -46,7 +49,7 @@ var rootCmd = &cobra.Command{
 		if(cliArgs.showVersion){
 			fmt.Println("Version: " + Config.AppVersion)
 			fmt.Println("Built at : " + Config.BuildDate)
-			os.Exit(0)
+			exit(0)
 		}
 
         if(cliArgs.configPath == "") {
@@ -56,9 +59,19 @@ var rootCmd = &cobra.Command{
         err := Config.LoadFromFile(cliArgs.configPath)
         if err != nil {
             log.Errorf("Error while read config file '%s': %s", cliArgs.configPath, err)
-            os.Exit(1)
+            exit(1)
         }
 
+        Config.Name = cliArgs.configPath[strings.LastIndex(cliArgs.configPath, "/")+1:]
+        Config.Workdir = os.TempDir() + "/admin-toolbox/" + Config.Name
+        log.Debugf("Workdir is %s", Config.Workdir)
+        err = os.MkdirAll(Config.Workdir, 0700)
+        if err != nil {
+            log.Errorf("Error while creating workidr: %s", err)
+            exit(1)
+        }
 		Run()
+        exit(0)
+
 	},
 }
