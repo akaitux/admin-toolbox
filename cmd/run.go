@@ -52,10 +52,10 @@ func createContainerName() string {
 
     t := time.Now()
     return fmt.Sprintf(
-        "admin-toolbox-%s-%s-%d%d%d%d%d",
+        "admbox-%s-%s-%d%d%d-%d%d%d",
         USER.Username,
         Config.Name,
-        t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(),
+        t.Hour(), t.Minute(), t.Second(), t.Day(), t.Month(), t.Year(),
     )
 }
 
