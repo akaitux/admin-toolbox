@@ -81,6 +81,18 @@ func containerCreateNoPullFallback(cli *client.Client) (container.CreateResponse
 	labels["admin_toolbox"] = "true"
 	labels["for_uid"] = usr.Uid
 
+
+    currentPwd, err := os.Getwd()
+    if err != nil {
+        return nilReturn, err
+    }
+
+    pwd := usr.HomeDir
+    if strings.HasPrefix(currentPwd, usr.HomeDir) {
+        pwd = currentPwd
+    }
+
+
 	ContainerConfig := &container.Config{
         User: fmt.Sprintf("%s:%s", usr.Uid, usr.Gid),
 		Image: Config.Image,
@@ -90,6 +102,7 @@ func containerCreateNoPullFallback(cli *client.Client) (container.CreateResponse
 		AttachStdout:true,
 		OpenStdin:   true,
 		Labels: labels,
+        WorkingDir: pwd,
 	}
 
     if len(Config.userConfig.Entrypoint) != 0 {
@@ -104,7 +117,6 @@ func containerCreateNoPullFallback(cli *client.Client) (container.CreateResponse
         ContainerConfig.Env = append(ContainerConfig.Env, Config.userConfig.Env...)
     }
     ContainerConfig.Env = append(ContainerConfig.Env, os.Environ()...)
-    log.Errorf("%v", os.Environ())
 
 
 	var emptyMountsSliceEntry []mount.Mount
@@ -199,14 +211,13 @@ func containerAttach(cli *client.Client, cont *container.CreateResponse) error {
             exit(1)
 		}
 
-		// Wrapper around Stdin for the container, to detect Ctrl+C (as we are in raw mode)
 		go func() {
 			consoleReader := bufio.NewReaderSize(os.Stdin, 1)
 			for {
 				input, _ := consoleReader.ReadByte()
 				// Ctrl-C = 3
 				if input == 3 {
-					log.Debug("Detected Ctrl+C, so telling docker to remove the container: " + cont.ID)
+					log.Debug("Detected Ctrl+C")
 					// cli.ContainerRemove( context.Background(), cont.ID, types.ContainerRemoveOptions{
 					// 	Force: true,
 					// } )
