@@ -316,9 +316,9 @@ func containerAttach(cli *client.Client, cont *container.CreateResponse) error {
 	}
 	fmt.Println("");
 
-	// log.Debug("Ensuring Container Removal: " + cont.ID);
-	// cli.ContainerRemove( context.Background(), cont.ID, types.ContainerRemoveOptions{
-	// 	Force: true,
-	// } )
+	log.Debug("Ensuring Container Removal: " + cont.ID);
+	cli.ContainerRemove( context.Background(), cont.ID, types.ContainerRemoveOptions{
+		Force: true,
+	} )
     return nil
 }
