@@ -1,4 +1,4 @@
-entrypoint: ["bash", "-c", "while true; do bash || true; done"]
+entrypoint: ["/bin/bash"]
 
 #entrypoint: ["bash", "-c", "bash $HOME/.startup.sh"]
 

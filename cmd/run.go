@@ -249,15 +249,19 @@ func containerAttach(cli *client.Client, cont *container.CreateResponse) error {
     }
 
 
+    // waiter.Conn.Write([]byte("source $HOME/.startup.sh;clear -x"))
+    // waiter.Conn.Write([]byte{0x0a}) // \n
+
+
 	// When TTY is ON, just copy stdout
 	// See: https://github.com/docker/cli/blob/70a00157f161b109be77cd4f30ce0662bfe8cc32/cli/command/container/hijack.go#L121-L130
 	go io.Copy(os.Stdout, waiter.Reader)
 
-	err = cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
-	if err != nil {
+    err = cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
+    if err != nil {
         log.Errorf("Error Starting container (%s): %s", cont.ID, err)
         exit(1)
-	}
+    }
 
 	fd := int(os.Stdin.Fd())
 	var oldState *terminal.State
@@ -327,13 +331,13 @@ func containerAttach(cli *client.Client, cont *container.CreateResponse) error {
     return nil
 }
 
-func execInContainer(cli *client.Client, cont *container.CreateResponse) error {
+func execInContainer(cli *client.Client, cont *container.CreateResponse, cmd []string) error {
 
     // Custom entrypoint after start container
     execConfig := types.ExecConfig {
         AttachStderr: true,
         AttachStdout: true,
-        Cmd: []string{"/bin/touch", "/tmp/1"},
+        Cmd: cmd,
     }
     execResponse, err := cli.ContainerExecCreate(context.Background(), cont.ID, execConfig)
     if err != nil {
