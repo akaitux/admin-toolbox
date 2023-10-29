@@ -1,4 +1,4 @@
-entrypoint: ["bash", "-c", "while true; do bash || true; done"]
+entrypoint: ["bash", "-c", "END=0; trap 'END=1' SIGILL;  while [ \"$END\" != \"1\" ]; do bash || true; done"]
 home_volumes:
   - '.admin-toolbox/ssh:.ssh'
 

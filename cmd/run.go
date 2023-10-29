@@ -137,6 +137,15 @@ func containerCreateNoPullFallback(cli *client.Client) (container.CreateResponse
 		AutoRemove: true,
 	}
 
+    width, height, err := terminal.GetSize(0)
+    log.Debugf("Terminal size is: h:%d w:%d", height, width)
+
+    if err == nil {
+        HostConfig.ConsoleSize = [2]uint{uint(0), uint(0)}
+    } else {
+        log.Errorf("Error while get terminal size: %s", err)
+    }
+
     if err := setupMounts(HostConfig); err != nil {
         return nilReturn, err
     }
@@ -266,14 +275,22 @@ func containerAttach(cli *client.Client, cont *container.CreateResponse) error {
 
 		go func() {
 			consoleReader := bufio.NewReaderSize(os.Stdin, 1)
+            exitCounter := 0
 			for {
 				input, _ := consoleReader.ReadByte()
 				// Ctrl-D = 4
 				if input == 4 {
-					log.Debug("Detected Ctrl+D")
-					cli.ContainerRemove( context.Background(), cont.ID, types.ContainerRemoveOptions{
-						Force: true,
-					} )
+                    if exitCounter == 0 {
+                        waiter.Conn.Write([]byte{0x0a})
+                        waiter.Conn.Write([]byte("echo 'Press Ctrl-D again for exit'"))
+                        waiter.Conn.Write([]byte{0x0a})
+				        input, _ = consoleReader.ReadByte()
+                        if input == 4 {
+                            cli.ContainerRemove( context.Background(), cont.ID, types.ContainerRemoveOptions{
+                                Force: true,
+                            } )
+                        }
+                    }
 				}
 				waiter.Conn.Write([]byte{input})
 		}

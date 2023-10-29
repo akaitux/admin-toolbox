@@ -6,6 +6,7 @@ import (
     "errors"
 	"gopkg.in/yaml.v3"
     log "github.com/sirupsen/logrus"
+    "dario.cat/mergo"
 )
 
 type SSHAgent struct {
@@ -81,7 +82,10 @@ func (config *TConfig) Load(filepath string) error {
     if err := yaml.Unmarshal(userConfigData, &userConfig); err != nil {
         return err
     }
-    config.userConfig = userConfig
+    //config.userConfig = userConfig
+    if err := mergo.Merge(&config.userConfig, userConfig); err != nil {
+        return err
+    }
     return nil
 }
 
