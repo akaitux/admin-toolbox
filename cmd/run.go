@@ -137,15 +137,6 @@ func containerCreateNoPullFallback(cli *client.Client) (container.CreateResponse
 		AutoRemove: true,
 	}
 
-    width, height, err := terminal.GetSize(0)
-    log.Debugf("Terminal size is: h:%d w:%d", height, width)
-
-    if err == nil {
-        HostConfig.ConsoleSize = [2]uint{uint(0), uint(0)}
-    } else {
-        log.Errorf("Error while get terminal size: %s", err)
-    }
-
     if err := setupMounts(HostConfig); err != nil {
         return nilReturn, err
     }
@@ -272,6 +263,19 @@ func containerAttach(cli *client.Client, cont *container.CreateResponse) error {
 			log.Error("Terminal: make raw ERROR")
             exit(1)
 		}
+
+        go func () {
+            for {
+                width, height, err := terminal.GetSize(0)
+                if err == nil {
+                    cli.ContainerResize(context.Background(), cont.ID, types.ResizeOptions{
+                        Height: uint(height),
+                        Width: uint(width),
+                    })
+                }
+                time.Sleep(500 * time.Millisecond)
+            }
+        }()
 
 		go func() {
 			consoleReader := bufio.NewReaderSize(os.Stdin, 1)
