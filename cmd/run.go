@@ -17,12 +17,23 @@ import (
 )
 
 
+var USER *user.User
+var CONTAINER_NAME string
+
 func Run() {
     cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
     if err != nil {
         log.Errorf("Unable to create docker client: %s", err)
         os.Exit(1)
     }
+
+    USER, err = user.Current()
+    if err != nil {
+        log.Errorf("Error while get current user: %s", err)
+        exit(1)
+    }
+
+    CONTAINER_NAME = fmt.Sprintf("admin-toolbox--%s--%s", USER.Username, Config.Name)
 
     cont, err := containerCreate(cli)
     if err != nil {
@@ -92,6 +103,9 @@ func containerCreateNoPullFallback(cli *client.Client) (container.CreateResponse
     if len(Config.userConfig.Env) != 0 {
         ContainerConfig.Env = append(ContainerConfig.Env, Config.userConfig.Env...)
     }
+    ContainerConfig.Env = append(ContainerConfig.Env, os.Environ()...)
+    log.Errorf("%v", os.Environ())
+
 
 	var emptyMountsSliceEntry []mount.Mount
 
@@ -127,7 +141,6 @@ func containerCreateNoPullFallback(cli *client.Client) (container.CreateResponse
 	// 		},
 	// 	)
 	// }
-	// ContainerConfig.Env = fEnv
 
 	return cli.ContainerCreate(
 		context.Background(),
@@ -135,7 +148,7 @@ func containerCreateNoPullFallback(cli *client.Client) (container.CreateResponse
 		HostConfig,
 		nil,
 		nil,
-		"",
+		CONTAINER_NAME,
 		);
 }
 

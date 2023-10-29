@@ -4,6 +4,7 @@ import (
     "fmt"
     "os"
     "strings"
+    "path/filepath"
 
     "github.com/spf13/cobra"
     log "github.com/sirupsen/logrus"
@@ -63,7 +64,8 @@ var rootCmd = &cobra.Command{
             exit(1)
         }
 
-        Config.Name = cliArgs.configPath[strings.LastIndex(cliArgs.configPath, "/")+1:]
+        basename :=filepath.Base(cliArgs.configPath)
+        Config.Name = strings.TrimSuffix(basename, filepath.Ext(basename))
         Config.Workdir = os.TempDir() + "/admin-toolbox/" + Config.Name
         log.Debugf("Workdir is %s", Config.Workdir)
         err = os.MkdirAll(Config.Workdir, 0700)

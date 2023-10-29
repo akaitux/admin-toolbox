@@ -4,3 +4,4 @@ home_volumes:
 
 env:
   - TEST="HEY"
+  - TERM=xterm-256color
