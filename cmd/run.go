@@ -244,6 +244,10 @@ func containerAttach(cli *client.Client, cont *container.CreateResponse) error {
 		Stdin:		true,
 		Stream:	   true,
 	})
+    if err != nil {
+        return fmt.Errorf("Error while boostrap contaner: %s", err)
+    }
+
 
 	// When TTY is ON, just copy stdout
 	// See: https://github.com/docker/cli/blob/70a00157f161b109be77cd4f30ce0662bfe8cc32/cli/command/container/hijack.go#L121-L130
@@ -320,5 +324,29 @@ func containerAttach(cli *client.Client, cont *container.CreateResponse) error {
 	cli.ContainerRemove( context.Background(), cont.ID, types.ContainerRemoveOptions{
 		Force: true,
 	} )
+    return nil
+}
+
+func execInContainer(cli *client.Client, cont *container.CreateResponse) error {
+
+    // Custom entrypoint after start container
+    execConfig := types.ExecConfig {
+        AttachStderr: true,
+        AttachStdout: true,
+        Cmd: []string{"/bin/touch", "/tmp/1"},
+    }
+    execResponse, err := cli.ContainerExecCreate(context.Background(), cont.ID, execConfig)
+    if err != nil {
+        log.Debugf("ContainerExecCreateResponse: %v", execResponse)
+        return err
+    }
+    execAttachConfig := types.ExecStartCheck{
+        Tty: false,
+    }
+    resp, err := cli.ContainerExecAttach(context.Background(), execResponse.ID, execAttachConfig)
+    if err != nil {
+        log.Debugf("ContainerExecAttachResponse: %v", resp)
+        return err
+    }
     return nil
 }
