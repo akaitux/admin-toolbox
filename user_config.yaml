@@ -1,4 +1,4 @@
-entrypoint: ["/bin/bash"]
+entrypoint: ["bash", "-c", "while true; do bash || true; done"]
 home_volumes:
   - '.admin-toolbox/.ssh:.ssh'
 

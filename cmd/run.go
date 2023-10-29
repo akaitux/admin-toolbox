@@ -4,6 +4,7 @@ import (
     "os"
     "io"
     "bufio"
+    "time"
     "os/user"
     "fmt"
     "strings"
@@ -33,7 +34,7 @@ func Run() {
         exit(1)
     }
 
-    CONTAINER_NAME = fmt.Sprintf("admin-toolbox--%s--%s", USER.Username, Config.Name)
+    CONTAINER_NAME = createContainerName()
 
     cont, err := containerCreate(cli)
     if err != nil {
@@ -45,6 +46,17 @@ func Run() {
         log.Error(err)
         exit(1)
     }
+}
+
+func createContainerName() string {
+
+    t := time.Now()
+    return fmt.Sprintf(
+        "admin-toolbox-%s-%s-%d%d%d%d%d",
+        USER.Username,
+        Config.Name,
+        t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(),
+    )
 }
 
 
@@ -91,7 +103,6 @@ func containerCreateNoPullFallback(cli *client.Client) (container.CreateResponse
     if strings.HasPrefix(currentPwd, usr.HomeDir) {
         pwd = currentPwd
     }
-
 
 	ContainerConfig := &container.Config{
         User: fmt.Sprintf("%s:%s", usr.Uid, usr.Gid),
@@ -141,18 +152,18 @@ func containerCreateNoPullFallback(cli *client.Client) (container.CreateResponse
         },
     )
 
-	// for i := 0; i < len(fVolume); i++ {
-	// 	splits := strings.Split(fVolume[i], ":")
-	// 	localPath, containerPath := splits[0], splits[1]
-	// 	HostConfig.Mounts = append(
-	// 		HostConfig.Mounts,
-	// 		mount.Mount{
-	// 			Type:   mount.TypeBind,
-	// 			Source: localPath,
-	// 			Target: containerPath,
-	// 		},
-	// 	)
-	// }
+    for _, rawVolume := range Config.AdditionalVolumes {
+		splits := strings.Split(rawVolume, ":")
+		localPath, containerPath := splits[0], splits[1]
+		HostConfig.Mounts = append(
+			HostConfig.Mounts,
+			mount.Mount{
+				Type:   mount.TypeBind,
+				Source: localPath,
+				Target: containerPath,
+			},
+		)
+	}
 
 	return cli.ContainerCreate(
 		context.Background(),
@@ -215,12 +226,12 @@ func containerAttach(cli *client.Client, cont *container.CreateResponse) error {
 			consoleReader := bufio.NewReaderSize(os.Stdin, 1)
 			for {
 				input, _ := consoleReader.ReadByte()
-				// Ctrl-C = 3
-				if input == 3 {
-					log.Debug("Detected Ctrl+C")
-					// cli.ContainerRemove( context.Background(), cont.ID, types.ContainerRemoveOptions{
-					// 	Force: true,
-					// } )
+				// Ctrl-D = 4
+				if input == 4 {
+					log.Debug("Detected Ctrl+D")
+					cli.ContainerRemove( context.Background(), cont.ID, types.ContainerRemoveOptions{
+						Force: true,
+					} )
 				}
 				waiter.Conn.Write([]byte{input})
 		}

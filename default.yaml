@@ -1,7 +1,9 @@
 image: "ubuntu:22.04"
 additional_volumes:
-  - "~/.devops-toolbox/kube:~/.kube"
-  - "~/.devops-toolbox/.terraformrc:~/.terraformrc"
+  - "/etc/passwd:/etc/passwd:ro"
+  - "/etc/group:/etc/group:ro"
+  - "/etc/shadow:/etc/shadow:ro"
+  - "/etc/locale.conf:/etc/locale.conf"
 
 ssh_agent:
   host: ""
