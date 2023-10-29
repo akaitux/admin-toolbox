@@ -137,33 +137,9 @@ func containerCreateNoPullFallback(cli *client.Client) (container.CreateResponse
 		AutoRemove: true,
 	}
 
-    // Check the home dir exists before mounting it
-    _, err = os.Stat(usr.HomeDir)
-    if os.IsNotExist(err) {
-        fmt.Println("Homedir does not exist.")
-        exit(1)
+    if err := setupMounts(HostConfig); err != nil {
+        return nilReturn, err
     }
-    HostConfig.Mounts = append(
-        HostConfig.Mounts,
-        mount.Mount{
-            Type:   mount.TypeBind,
-            Source: usr.HomeDir,
-            Target: usr.HomeDir,
-        },
-    )
-
-    for _, rawVolume := range Config.AdditionalVolumes {
-		splits := strings.Split(rawVolume, ":")
-		localPath, containerPath := splits[0], splits[1]
-		HostConfig.Mounts = append(
-			HostConfig.Mounts,
-			mount.Mount{
-				Type:   mount.TypeBind,
-				Source: localPath,
-				Target: containerPath,
-			},
-		)
-	}
 
 	return cli.ContainerCreate(
 		context.Background(),
@@ -173,6 +149,72 @@ func containerCreateNoPullFallback(cli *client.Client) (container.CreateResponse
 		nil,
 		CONTAINER_NAME,
 		);
+}
+
+func setupMounts(hostConfig *container.HostConfig) error {
+    // Check the home dir exists before mounting it
+    _, err := os.Stat(USER.HomeDir)
+    if os.IsNotExist(err) {
+        return fmt.Errorf("Homedir does not exist.")
+    }
+    hostConfig.Mounts = append(
+        hostConfig.Mounts,
+        mount.Mount{
+            Type:   mount.TypeBind,
+            Source: USER.HomeDir,
+            Target: USER.HomeDir,
+        },
+    )
+
+    for _, rawVolume := range Config.AdditionalVolumes {
+		splits := strings.Split(rawVolume, ":")
+		localPath, containerPath := splits[0], splits[1]
+		hostConfig.Mounts = append(
+			hostConfig.Mounts,
+			mount.Mount{
+				Type:   mount.TypeBind,
+				Source: localPath,
+				Target: containerPath,
+			},
+		)
+	}
+
+    for _, rawVolume := range Config.userConfig.HomeVolumes {
+		splits := strings.Split(rawVolume, ":")
+		localPath, containerPath := splits[0], splits[1]
+        if err := validateHomeMount(localPath); err != nil {
+            return fmt.Errorf("Home volume is not valid %s: %s",rawVolume, err)
+        }
+        if err := validateHomeMount(containerPath); err != nil {
+            return fmt.Errorf("Home volume is not valid '%s': %s",rawVolume, err)
+        }
+        localPath = fmt.Sprintf("%s/%s", USER.HomeDir, localPath)
+        containerPath = fmt.Sprintf("%s/%s", USER.HomeDir, containerPath)
+		hostConfig.Mounts = append(
+			hostConfig.Mounts,
+			mount.Mount{
+				Type:   mount.TypeBind,
+				Source: localPath,
+				Target: containerPath,
+			},
+		)
+    }
+
+    return nil
+}
+
+func validateHomeMount(mount string) error {
+    // direction - host/container
+    if strings.Contains(mount, "..") {
+        return fmt.Errorf("'..' is denied")
+    }
+    if strings.HasPrefix(mount, "/") {
+        return fmt.Errorf("'/' in begin of volume is denied ")
+    }
+    if strings.HasPrefix(mount, "./") {
+        return fmt.Errorf("'./' in begin of volume is denied ")
+    }
+    return nil
 }
 
 func pullImage(cli *client.Client) error {

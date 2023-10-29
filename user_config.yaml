@@ -1,7 +1,6 @@
 entrypoint: ["bash", "-c", "while true; do bash || true; done"]
 home_volumes:
-  - '.admin-toolbox/.ssh:.ssh'
+  - '.admin-toolbox/ssh:.ssh'
 
 env:
   - TEST="HEY"
-  - TERM=xterm-256color
