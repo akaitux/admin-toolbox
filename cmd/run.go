@@ -93,7 +93,6 @@ func containerCreateNoPullFallback(cli *client.Client) (container.CreateResponse
 	labels["admin_toolbox"] = "true"
 	labels["for_uid"] = usr.Uid
 
-
     currentPwd, err := os.Getwd()
     if err != nil {
         return nilReturn, err

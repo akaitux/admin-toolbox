@@ -1,4 +1,5 @@
-entrypoint: ["/bin/bash"]
+entrypoint: []
+cmd: ["/bin/bash"]
 
 #entrypoint: ["bash", "-c", "bash $HOME/.startup.sh"]
 
