@@ -4,6 +4,8 @@ import (
     "fmt"
     "os"
     "strings"
+    "strconv"
+    "os/user"
     "path/filepath"
 
     "github.com/spf13/cobra"
@@ -64,17 +66,35 @@ var rootCmd = &cobra.Command{
             exit(1)
         }
 
+        usr, err := user.Current()
+        if err != nil {
+            log.Errorf("Cobra. Error while get current user: %s", err)
+            exit(1)
+        }
         basename :=filepath.Base(cliArgs.configPath)
         Config.Name = strings.TrimSuffix(basename, filepath.Ext(basename))
-        Config.Workdir = os.TempDir() + "/admin-toolbox/" + Config.Name
+        workdirBasePath := usr.HomeDir + "/.cache/admin-toolbox/"
+        workdirFullPath := workdirBasePath + Config.Name
+        Config.Workdir = workdirFullPath
         log.Debugf("Workdir is %s", Config.Workdir)
-        err = os.MkdirAll(Config.Workdir, 0700)
+        err = os.MkdirAll(Config.Workdir, os.FileMode(0700))
         if err != nil {
             log.Errorf("Error while creating workidr: %s", err)
             exit(1)
         }
+        uid, _ := strconv.Atoi(usr.Uid)
+        gid, _ := strconv.Atoi(usr.Gid)
+        err = os.Chown(workdirBasePath, uid, gid)
+        if err != nil {
+            log.Errorf("Error while chown workidr: %s", err)
+            exit(1)
+        }
+        err = os.Chown(workdirFullPath, uid, gid)
+        if err != nil {
+            log.Errorf("Error while chown workidr: %s", err)
+            exit(1)
+        }
 		Run()
         exit(0)
-
 	},
 }
