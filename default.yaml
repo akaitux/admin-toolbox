@@ -10,5 +10,7 @@ ssh_agent:
   host: ""
   key_path: ""
 
-#user_config:
+user_config:
+  inherit_env: true
+  #inherit_env_exclude: []
 #  entrypoint:

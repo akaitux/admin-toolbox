@@ -32,6 +32,8 @@ type Config struct {
 
 	Image             string   `yaml:"image"`
 	AdditionalVolumes []string `yaml:"additional_volumes"`
+    InheritEnv        bool     `yaml:"inherit_env"`
+    InheritEnvExclude []string `yaml:"inherit_env_exclude"`
 
 	UserConfig UserConfig `yaml:"user_config"`
 }

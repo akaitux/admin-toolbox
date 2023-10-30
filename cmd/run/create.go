@@ -103,18 +103,22 @@ func containerCreateNoPullFallback(cli *cli.Cli) (container.CreateResponse, erro
 		ContainerConfig.Cmd = cli.Config.UserConfig.Cmd
 	}
 
+	//ContainerConfig.Env = append(ContainerConfig.Env, os.Environ()...)
+    if cli.Config.InheritEnv {
+        envBlackList := []string{"SHLVL", "SHELLOPTS"}
+        envBlackList = append(envBlackList, cli.Config.InheritEnvExclude...)
+        for _, env := range os.Environ() {
+            split := strings.SplitN(env, "=", 2)
+            if contains(envBlackList, split[0]) {
+                continue
+            }
+            ContainerConfig.Env = append(ContainerConfig.Env, env)
+        }
+    }
+
 	if len(cli.Config.UserConfig.Env) != 0 {
 		ContainerConfig.Env = append(ContainerConfig.Env, cli.Config.UserConfig.Env...)
 	}
-	//ContainerConfig.Env = append(ContainerConfig.Env, os.Environ()...)
-    envBlackList := []string{"SHLVL", "SHELLOPTS"}
-    for _, env := range os.Environ() {
-        split := strings.SplitN(env, "=", 2)
-        if contains(envBlackList, split[0]) {
-            continue
-        }
-        ContainerConfig.Env = append(ContainerConfig.Env, env)
-    }
 
 	var emptyMountsSliceEntry []mount.Mount
 
