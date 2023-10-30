@@ -107,11 +107,10 @@ func containerCreateNoPullFallback(cli *cli.Cli) (container.CreateResponse, erro
 		ContainerConfig.Env = append(ContainerConfig.Env, cli.Config.UserConfig.Env...)
 	}
 	//ContainerConfig.Env = append(ContainerConfig.Env, os.Environ()...)
+    envBlackList := []string{"SHLVL", "SHELLOPTS"}
     for _, env := range os.Environ() {
-        if strings.HasPrefix(env, "SHLVL=") {
-            continue
-        }
-        if strings.HasPrefix(env, "SHELLOPTS=") {
+        split := strings.SplitN(env, "=", 2)
+        if contains(envBlackList, split[0]) {
             continue
         }
         ContainerConfig.Env = append(ContainerConfig.Env, env)
@@ -138,3 +137,11 @@ func containerCreateNoPullFallback(cli *cli.Cli) (container.CreateResponse, erro
 	)
 }
 
+func contains(s []string, e string) bool {
+    for _, a := range s {
+        if a == e {
+            return true
+        }
+    }
+    return false
+}
