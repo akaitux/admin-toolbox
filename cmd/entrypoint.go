@@ -8,6 +8,7 @@ import (
     "os/user"
     "path/filepath"
 
+    "admin-toolbox/config"
     "github.com/spf13/cobra"
     log "github.com/sirupsen/logrus"
 )
@@ -31,9 +32,9 @@ func Execute(appVersion string, buildDate string, confDir string) {
 	rootCmd.PersistentFlags().BoolVarP(&cliArgs.showVersion, "version", "", false, "version information")
 
 
-	Config.AppVersion = appVersion
-	Config.BuildDate = buildDate
-    Config.ConfDir = confDir
+	config.Config.AppVersion = appVersion
+	config.Config.BuildDate = buildDate
+    config.Config.ConfDir = confDir
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -51,8 +52,8 @@ var rootCmd = &cobra.Command{
         }
 
 		if(cliArgs.showVersion){
-			fmt.Println("Version: " + Config.AppVersion)
-			fmt.Println("Built at : " + Config.BuildDate)
+			fmt.Println("Version: " + config.Config.AppVersion)
+			fmt.Println("Built at : " + config.Config.BuildDate)
 			exit(0)
 		}
 
@@ -60,7 +61,7 @@ var rootCmd = &cobra.Command{
             log.Error("-c argument required (no config path)")
             os.Exit(1)
         }
-        err := Config.Load(cliArgs.configPath)
+        err := config.Config.Load(cliArgs.configPath)
         if err != nil {
             log.Errorf("Error while read config file '%s': %s", cliArgs.configPath, err)
             exit(1)
@@ -72,12 +73,12 @@ var rootCmd = &cobra.Command{
             exit(1)
         }
         basename :=filepath.Base(cliArgs.configPath)
-        Config.Name = strings.TrimSuffix(basename, filepath.Ext(basename))
+        config.Config.Name = strings.TrimSuffix(basename, filepath.Ext(basename))
         workdirBasePath := usr.HomeDir + "/.cache/admin-toolbox/"
-        workdirFullPath := workdirBasePath + Config.Name
-        Config.Workdir = workdirFullPath
-        log.Debugf("Workdir is %s", Config.Workdir)
-        err = os.MkdirAll(Config.Workdir, os.FileMode(0700))
+        workdirFullPath := workdirBasePath + config.Config.Name
+        config.Config.Workdir = workdirFullPath
+        log.Debugf("Workdir is %s", config.Config.Workdir)
+        err = os.MkdirAll(config.Config.Workdir, os.FileMode(0700))
         if err != nil {
             log.Errorf("Error while creating workidr: %s", err)
             exit(1)

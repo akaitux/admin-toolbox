@@ -1,4 +1,4 @@
-module github.com/akaitux/admin-toolbox
+module admin-toolbox
 
 go 1.20
 

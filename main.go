@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/akaitux/admin-toolbox/cmd"
+	"admin-toolbox/cmd"
 )
 
 var (

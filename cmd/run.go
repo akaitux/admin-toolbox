@@ -9,6 +9,7 @@ import (
     "fmt"
     "strings"
     "context"
+    "admin-toolbox/config"
     log "github.com/sirupsen/logrus"
     "github.com/docker/docker/api/types"
     "github.com/docker/docker/api/types/container"
@@ -54,7 +55,7 @@ func createContainerName() string {
     return fmt.Sprintf(
         "admbox-%s-%s-%d%d%d-%d%d%d",
         USER.Username,
-        Config.Name,
+        config.Config.Name,
         t.Hour(), t.Minute(), t.Second(), t.Day(), t.Month(), t.Year(),
     )
 }
@@ -63,7 +64,7 @@ func createContainerName() string {
 func containerCreate(cli *client.Client) (container.CreateResponse, error) {
     nilReturn := container.CreateResponse{}
 
-    if Config.Image == "" {
+    if config.Config.Image == "" {
         return nilReturn, fmt.Errorf("'image' is empty")
     }
 
@@ -105,7 +106,7 @@ func containerCreateNoPullFallback(cli *client.Client) (container.CreateResponse
 
 	ContainerConfig := &container.Config{
         User: fmt.Sprintf("%s:%s", usr.Uid, usr.Gid),
-		Image: Config.Image,
+		Image: config.Config.Image,
 		AttachStderr:true,
 		AttachStdin: true,
 		Tty:		 true,
@@ -115,16 +116,16 @@ func containerCreateNoPullFallback(cli *client.Client) (container.CreateResponse
         WorkingDir: pwd,
 	}
 
-    if len(Config.userConfig.Entrypoint) != 0 {
-        ContainerConfig.Entrypoint = Config.userConfig.Entrypoint
+    if len(config.Config.UserConfig.Entrypoint) != 0 {
+        ContainerConfig.Entrypoint = config.Config.UserConfig.Entrypoint
     }
 
-    if len(Config.userConfig.Cmd) != 0 {
-        ContainerConfig.Cmd = Config.userConfig.Cmd
+    if len(config.Config.UserConfig.Cmd) != 0 {
+        ContainerConfig.Cmd = config.Config.UserConfig.Cmd
     }
 
-    if len(Config.userConfig.Env) != 0 {
-        ContainerConfig.Env = append(ContainerConfig.Env, Config.userConfig.Env...)
+    if len(config.Config.UserConfig.Env) != 0 {
+        ContainerConfig.Env = append(ContainerConfig.Env, config.Config.UserConfig.Env...)
     }
     ContainerConfig.Env = append(ContainerConfig.Env, os.Environ()...)
 
@@ -165,7 +166,7 @@ func setupMounts(hostConfig *container.HostConfig) error {
         },
     )
 
-    for _, rawVolume := range Config.AdditionalVolumes {
+    for _, rawVolume := range config.Config.AdditionalVolumes {
 		splits := strings.Split(rawVolume, ":")
 		localPath, containerPath := splits[0], splits[1]
 		hostConfig.Mounts = append(
@@ -178,7 +179,7 @@ func setupMounts(hostConfig *container.HostConfig) error {
 		)
 	}
 
-    for _, rawVolume := range Config.userConfig.HomeVolumes {
+    for _, rawVolume := range config.Config.UserConfig.HomeVolumes {
 		splits := strings.Split(rawVolume, ":")
 		localPath, containerPath := splits[0], splits[1]
         if err := validateHomeMount(localPath); err != nil {
@@ -220,7 +221,7 @@ func pullImage(cli *client.Client) error {
 	log.Info("Pulling image");
 	_, err := cli.ImagePull(
 		context.Background(),
-		Config.Image,
+		config.Config.Image,
 		types.ImagePullOptions{},
 	)
 	if err != nil {
