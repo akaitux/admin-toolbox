@@ -7,32 +7,80 @@ import(
     "strings"
     "os"
     "io"
-    "bufio"
     "admin-toolbox/cmd/cli"
+    "admin-toolbox/streams"
     "github.com/sirupsen/logrus"
     "github.com/docker/docker/api/types"
     "github.com/docker/docker/api/types/container"
     "github.com/docker/docker/api/types/mount"
     "github.com/docker/docker/client"
-    "golang.org/x/crypto/ssh/terminal"
+    "github.com/moby/term"
 
 )
 
 
 var CONTAINER_NAME string
-
+var OPTIONS runOptions
 
 func run(cli *cli.Cli, options runOptions) error {
     CONTAINER_NAME = createContainerName(cli)
+    OPTIONS = options
+
+    ctx, cancelFun := context.WithCancel(context.Background())
+    defer cancelFun()
+
+    var errCh chan error
+
+    _, stderr := cli.Out(), cli.Err()
 
     cont, err := containerCreate(cli)
     if err != nil {
         return fmt.Errorf("Create container error: %s", err)
     }
 
-    if err := containerAttach(cli.Client, &cont); err != nil {
+    closeFn, err := containerAttach(ctx, cli, &cont, &errCh)
+    if err != nil {
         return err
     }
+    defer closeFn()
+
+    statusChan := waitExitOrRemoved(ctx, cli.Client, cont.ID, true)
+
+	// start the container
+	if err := cli.Client.ContainerStart(ctx, cont.ID, types.ContainerStartOptions{}); err != nil {
+		// If we have hijackedIOStreamer, we should notify
+		// hijackedIOStreamer we are going to exit and wait
+		// to avoid the terminal are not restored.
+        cancelFun()
+        <-errCh
+
+		reportError(stderr, "run", err.Error(), false)
+		// wait container to be removed
+		<-statusChan
+		return runStartContainerErr(err)
+	}
+
+    if err := MonitorTtySize(ctx, cli, cont.ID, false); err != nil {
+        _, _ = fmt.Fprintln(stderr, "Error monitoring TTY size:", err)
+    }
+
+	if errCh != nil {
+		if err := <-errCh; err != nil {
+			if _, ok := err.(term.EscapeError); ok {
+				// The user entered the detach escape sequence.
+				return nil
+			}
+
+			logrus.Debugf("Error hijack: %s", err)
+			return err
+		}
+	}
+
+	status := <-statusChan
+	if status != 0 {
+		return fmt.Errorf("Exit, status %d", status)
+	}
+
     return nil
 }
 
@@ -223,96 +271,54 @@ func pullImage(cli *cli.Cli) error {
 	// }
 }
 
-func containerAttach(cli *client.Client, cont *container.CreateResponse) error {
-    waiter, err := cli.ContainerAttach(context.Background(), cont.ID, types.ContainerAttachOptions{
+func containerAttach(
+    ctx context.Context,
+    cli *cli.Cli,
+    cont *container.CreateResponse,
+    errCh *chan error,
+) (func(), error) {
+
+    resp, errAttach := cli.Client.ContainerAttach(ctx, cont.ID, types.ContainerAttachOptions{
 		Stderr:	   true,
 		Stdout:	   true,
 		Stdin:		true,
 		Stream:	   true,
-	})
-    if err != nil {
-        return fmt.Errorf("Error while boostrap contaner: %s", err)
-    }
+    })
 
+	if errAttach != nil {
+		return nil, errAttach
+	}
 
-    // waiter.Conn.Write([]byte("source $HOME/.startup.sh;clear -x"))
-    // waiter.Conn.Write([]byte{0x0a}) // \n
+	var (
+		out, cerr io.Writer
+		in        io.ReadCloser
+	)
+	in = cli.In()
+	out = cli.Out()
+	cerr = cli.Err()
 
+	ch := make(chan error, 1)
+	*errCh = ch
 
-	// When TTY is ON, just copy stdout
-	// See: https://github.com/docker/cli/blob/70a00157f161b109be77cd4f30ce0662bfe8cc32/cli/command/container/hijack.go#L121-L130
-	go io.Copy(os.Stdout, waiter.Reader)
+	go func() {
+		ch <- func() error {
+			streamer := streams.HijackedIOStreamer{
+				Streams:      cli,
+				InputStream:  in,
+				OutputStream: out,
+				ErrorStream:  cerr,
+				Resp:         resp,
+				Tty:          true,
+                DetachKeys:    "ctrl-e,e",
+			}
 
-    err = cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
-    if err != nil {
-        return fmt.Errorf("Error Starting container (%s): %s", cont.ID, err)
-    }
-
-	fd := int(os.Stdin.Fd())
-	var oldState *terminal.State
-	if terminal.IsTerminal(fd) {
-		oldState, err = terminal.MakeRaw(fd)
-		if err != nil {
-			return fmt.Errorf("Terminal: make raw ERROR")
-		}
-
-        go func () {
-            for {
-                width, height, err := terminal.GetSize(0)
-                if err == nil {
-                    cli.ContainerResize(context.Background(), cont.ID, types.ResizeOptions{
-                        Height: uint(height),
-                        Width: uint(width),
-                    })
-                }
-                time.Sleep(500 * time.Millisecond)
-            }
-        }()
-
-		go func() {
-			consoleReader := bufio.NewReaderSize(os.Stdin, 1)
-            exitCounter := 0
-			for {
-				input, _ := consoleReader.ReadByte()
-				// Ctrl-D = 4
-				if input == 4 {
-                    if exitCounter == 0 {
-                        waiter.Conn.Write([]byte{0x0a})
-                        waiter.Conn.Write([]byte("echo 'Press Ctrl-D again for exit'"))
-                        waiter.Conn.Write([]byte{0x0a})
-				        input, _ = consoleReader.ReadByte()
-                        if input == 4 {
-                            cli.ContainerRemove( context.Background(), cont.ID, types.ContainerRemoveOptions{
-                                Force: true,
-                            } )
-                        }
-                    }
-				}
-				waiter.Conn.Write([]byte{input})
-		}
+			if errHijack := streamer.Stream(ctx); errHijack != nil {
+				return errHijack
+			}
+			return errAttach
 		}()
-	}
-
-	statusCh, errCh := cli.ContainerWait(context.Background(), cont.ID, container.WaitConditionNotRunning)
-	select {
-	case err := <-errCh:
-		if err != nil {
-			panic(err)
-		}
-	case <-statusCh:
-	}
-
-	logrus.Debug("Restoring terminal");
-	if terminal.IsTerminal(fd) {
-		terminal.Restore(fd, oldState)
-	}
-	fmt.Println("");
-
-	logrus.Debug("Ensuring Container Removal: " + cont.ID);
-	cli.ContainerRemove( context.Background(), cont.ID, types.ContainerRemoveOptions{
-		Force: true,
-	} )
-    return nil
+	}()
+	return resp.Close, nil
 }
 
 func execInContainer(cli *client.Client, cont *container.CreateResponse, cmd []string) error {

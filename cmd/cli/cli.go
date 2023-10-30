@@ -9,18 +9,10 @@ import (
     "admin-toolbox/streams"
     "admin-toolbox/workdir"
     "github.com/docker/docker/client"
-    "github.com/spf13/cobra"
-    "github.com/spf13/pflag"
     "github.com/moby/term"
     "github.com/sirupsen/logrus"
 )
 
-
-type TopLevelCommand struct {
-	Cmd       *cobra.Command
-	Cli       *Cli
-	Flags     *pflag.FlagSet
-}
 
 type CliArgs struct {
     ShowVersion    bool

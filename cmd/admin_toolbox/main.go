@@ -20,10 +20,10 @@ var (
 
 func run(rootCli *cli.Cli) error {
     tcmd := newCliCommand(rootCli)
-    return tcmd.Cmd.Execute()
+    return tcmd.Execute()
 }
 
-func newCliCommand(rootCli *cli.Cli) *cli.TopLevelCommand {
+func newCliCommand(rootCli *cli.Cli) *cobra.Command {
     cmd := &cobra.Command{
 		Use:              "admin-toolbox [OPTIONS] COMMAND [ARG...]",
 		SilenceUsage:     true,
@@ -50,12 +50,8 @@ func newCliCommand(rootCli *cli.Cli) *cli.TopLevelCommand {
     rootCli.Args = &args
 
     commands.AddCommands(cmd, rootCli)
+    return cmd
 
-    return &cli.TopLevelCommand{
-        Cmd: cmd,
-        Cli: rootCli,
-        Flags: cmd.Flags(),
-    }
 }
 
 func main() {

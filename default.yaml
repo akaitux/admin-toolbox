@@ -1,5 +1,5 @@
-image: "ubuntu:22.04"
-#image: "test"
+#image: "ubuntu:22.04"
+image: "test"
 additional_volumes:
   - "/etc/passwd:/etc/passwd:ro"
   - "/etc/group:/etc/group:ro"
@@ -10,5 +10,5 @@ ssh_agent:
   host: ""
   key_path: ""
 
-user_config:
-  entrypoint: ["/bin/bash"]
+#user_config:
+#  entrypoint:

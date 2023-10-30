@@ -1,5 +1,4 @@
-entrypoint: ["bash", "-c", "while true; do bash || true; done"]
-
+#entrypoint: ["bash", "-c", "while true; do bash || true; done"]
 #entrypoint: ["bash", "-c", "bash $HOME/.startup.sh"]
 
 home_volumes:
