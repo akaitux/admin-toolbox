@@ -19,6 +19,7 @@ import (
 
 var CONTAINER_NAME string
 var OPTIONS runOptions
+var DETACH_KEYS = "ctrl-e,e"
 
 func run(cli *cli.Cli, options runOptions) error {
 	CONTAINER_NAME = createContainerName(cli)
@@ -197,7 +198,7 @@ func containerAttach(
 				ErrorStream:  cerr,
 				Resp:         resp,
 				Tty:          true,
-				DetachKeys:   "ctrl-e,e",
+				DetachKeys:   DETACH_KEYS,
 			}
 
 			if errHijack := streamer.Stream(ctx); errHijack != nil {
