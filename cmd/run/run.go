@@ -7,12 +7,10 @@ import (
 	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
 	"github.com/moby/term"
 	"github.com/sirupsen/logrus"
 	"io"
-	"os"
 	"strings"
 	"time"
 )
@@ -94,58 +92,6 @@ func createContainerName(cli *cli.Cli) string {
 	)
 }
 
-func setupMounts(cli *cli.Cli, hostConfig *container.HostConfig) error {
-	// Check the home dir exists before mounting it
-	_, err := os.Stat(cli.CurrentUser.HomeDir)
-	if os.IsNotExist(err) {
-		return fmt.Errorf("Homedir does not exist.")
-	}
-	hostConfig.Mounts = append(
-		hostConfig.Mounts,
-		mount.Mount{
-			Type:   mount.TypeBind,
-			Source: cli.CurrentUser.HomeDir,
-			Target: cli.CurrentUser.HomeDir,
-		},
-	)
-
-	for _, rawVolume := range cli.Config.AdditionalVolumes {
-		splits := strings.Split(rawVolume, ":")
-		localPath, containerPath := splits[0], splits[1]
-		hostConfig.Mounts = append(
-			hostConfig.Mounts,
-			mount.Mount{
-				Type:   mount.TypeBind,
-				Source: localPath,
-				Target: containerPath,
-			},
-		)
-	}
-
-	for _, rawVolume := range cli.Config.UserConfig.HomeVolumes {
-		splits := strings.Split(rawVolume, ":")
-		localPath, containerPath := splits[0], splits[1]
-		if err := validateHomeMount(localPath); err != nil {
-			return fmt.Errorf("Home volume is not valid %s: %s", rawVolume, err)
-		}
-		if err := validateHomeMount(containerPath); err != nil {
-			return fmt.Errorf("Home volume is not valid '%s': %s", rawVolume, err)
-		}
-		localPath = fmt.Sprintf("%s/%s", cli.CurrentUser.HomeDir, localPath)
-		containerPath = fmt.Sprintf("%s/%s", cli.CurrentUser.HomeDir, containerPath)
-		hostConfig.Mounts = append(
-			hostConfig.Mounts,
-			mount.Mount{
-				Type:   mount.TypeBind,
-				Source: localPath,
-				Target: containerPath,
-			},
-		)
-	}
-
-	return nil
-}
-
 func validateHomeMount(mount string) error {
 	// direction - host/container
 	if strings.Contains(mount, "..") {
@@ -214,8 +160,8 @@ func execInContainer(cli *client.Client, cont *container.CreateResponse, cmd []s
 
 	// Custom entrypoint after start container
 	execConfig := types.ExecConfig{
-		AttachStderr: true,
-		AttachStdout: true,
+		AttachStderr: false,
+		AttachStdout: false,
 		Cmd:          cmd,
 	}
 	execResponse, err := cli.ContainerExecCreate(context.Background(), cont.ID, execConfig)
