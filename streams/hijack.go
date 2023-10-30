@@ -18,7 +18,6 @@ import (
 // TODO: This could be moved to `pkg/term`.
 var defaultEscapeKeys = []byte{16, 17}
 
-
 type Streams interface {
 	In() *In
 	Out() *Out
@@ -185,17 +184,17 @@ func (h *HijackedIOStreamer) beginInputStream(restoreInput func()) (doneC <-chan
 }
 
 func setRawTerminal(streams Streams) error {
-    in := streams.In()
+	in := streams.In()
 	if err := in.SetRawTerminal(); err != nil {
 		return err
 	}
-    out := streams.Out()
+	out := streams.Out()
 	return out.SetRawTerminal()
 }
 
 func restoreTerminal(streams Streams, in io.Closer) error {
-    prev_in := streams.In()
-    prev_out := streams.Out()
+	prev_in := streams.In()
+	prev_out := streams.Out()
 	prev_in.RestoreTerminal()
 	prev_out.RestoreTerminal()
 	// WARNING: DO NOT REMOVE THE OS CHECKS !!!

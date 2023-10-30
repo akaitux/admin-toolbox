@@ -7,11 +7,11 @@ import (
 	gosignal "os/signal"
 	"time"
 
+	"admin-toolbox/cmd/cli"
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/moby/sys/signal"
-    "github.com/docker/docker/api/types"
 	"github.com/sirupsen/logrus"
-    "admin-toolbox/cmd/cli"
 )
 
 // resizeTtyTo resizes tty to specific height and width
@@ -69,12 +69,12 @@ func initTtySize(ctx context.Context, cli *cli.Cli, id string, isExec bool, resi
 // MonitorTtySize updates the container tty size when the terminal tty changes size
 func MonitorTtySize(ctx context.Context, cli *cli.Cli, id string, isExec bool) error {
 	initTtySize(ctx, cli, id, isExec, resizeTty)
-    sigchan := make(chan os.Signal, 1)
-    gosignal.Notify(sigchan, signal.SIGWINCH)
-    go func() {
-        for range sigchan {
-            resizeTty(ctx, cli, id, isExec)
-        }
-    }()
+	sigchan := make(chan os.Signal, 1)
+	gosignal.Notify(sigchan, signal.SIGWINCH)
+	go func() {
+		for range sigchan {
+			resizeTty(ctx, cli, id, isExec)
+		}
+	}()
 	return nil
 }

@@ -2,11 +2,11 @@ package run
 
 import (
 	"context"
-    "io"
-    "fmt"
+	"fmt"
+	"io"
 	"strconv"
-    "strings"
-    "syscall"
+	"strings"
+	"syscall"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
