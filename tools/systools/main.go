@@ -1,15 +1,16 @@
-package cmd
+package systools
 
 import (
     "os"
-    "admin-toolbox/config"
+    "admin-toolbox/workdir"
     log "github.com/sirupsen/logrus"
 )
 
 
-func exit(code int) {
+func ClearExit(code int, wrkdir *workdir.Workdir) {
     log.Debug("Cleanup workdir...")
-    os.RemoveAll(config.Config.Workdir)
+    os.RemoveAll(wrkdir.Fullpath)
     log.Debugf("Exit with code %d", code)
     os.Exit(code)
 }
+

@@ -1,70 +1,58 @@
-package cmd
+package run
 
-import (
+import(
+    "time"
+    "context"
+    "fmt"
+    "strings"
     "os"
     "io"
     "bufio"
-    "time"
-    "os/user"
-    "fmt"
-    "strings"
-    "context"
-    "admin-toolbox/config"
-    log "github.com/sirupsen/logrus"
+    "admin-toolbox/cmd/cli"
+    "github.com/sirupsen/logrus"
     "github.com/docker/docker/api/types"
     "github.com/docker/docker/api/types/container"
     "github.com/docker/docker/api/types/mount"
     "github.com/docker/docker/client"
     "golang.org/x/crypto/ssh/terminal"
+
 )
 
 
-var USER *user.User
 var CONTAINER_NAME string
 
-func Run() {
-    cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-    if err != nil {
-        log.Errorf("Unable to create docker client: %s", err)
-        os.Exit(1)
-    }
 
-    USER, err = user.Current()
-    if err != nil {
-        log.Errorf("Error while get current user: %s", err)
-        exit(1)
-    }
-
-    CONTAINER_NAME = createContainerName()
+func run(cli *cli.Cli, options runOptions) error {
+    CONTAINER_NAME = createContainerName(cli)
 
     cont, err := containerCreate(cli)
     if err != nil {
-        log.Errorf("Create container error: %s", err)
-        exit(1)
+        return fmt.Errorf("Create container error: %s", err)
     }
 
-    if err := containerAttach(cli, &cont); err != nil {
-        log.Error(err)
-        exit(1)
+    if err := containerAttach(cli.Client, &cont); err != nil {
+        return err
     }
+    return nil
 }
 
-func createContainerName() string {
+
+func createContainerName(cli *cli.Cli) string {
 
     t := time.Now()
     return fmt.Sprintf(
         "admbox-%s-%s-%d%d%d-%d%d%d",
-        USER.Username,
-        config.Config.Name,
+        cli.CurrentUser.Username,
+        cli.Config.Name,
         t.Hour(), t.Minute(), t.Second(), t.Day(), t.Month(), t.Year(),
     )
 }
 
 
-func containerCreate(cli *client.Client) (container.CreateResponse, error) {
+func containerCreate(cli *cli.Cli) (container.CreateResponse, error) {
     nilReturn := container.CreateResponse{}
 
-    if config.Config.Image == "" {
+    if cli.Config.Image == "" {
         return nilReturn, fmt.Errorf("'image' is empty")
     }
 
@@ -73,7 +61,7 @@ func containerCreate(cli *client.Client) (container.CreateResponse, error) {
         if !strings.Contains(err.Error()," No such image") {
             return nilReturn, err
         }
-        log.Info("Pull image ...");
+        logrus.Info("Pull image ...");
         err = pullImage(cli);
         if err != nil {
             return nilReturn, err
@@ -83,12 +71,10 @@ func containerCreate(cli *client.Client) (container.CreateResponse, error) {
 	return cont, err;
 }
 
-func containerCreateNoPullFallback(cli *client.Client) (container.CreateResponse, error) {
+func containerCreateNoPullFallback(cli *cli.Cli) (container.CreateResponse, error) {
     nilReturn := container.CreateResponse{}
-    usr, err := user.Current()
-    if err != nil {
-        return nilReturn, err
-    }
+
+    usr := cli.CurrentUser
 
 	labels := make(map[string]string)
 	labels["admin_toolbox"] = "true"
@@ -106,7 +92,7 @@ func containerCreateNoPullFallback(cli *client.Client) (container.CreateResponse
 
 	ContainerConfig := &container.Config{
         User: fmt.Sprintf("%s:%s", usr.Uid, usr.Gid),
-		Image: config.Config.Image,
+		Image: cli.Config.Image,
 		AttachStderr:true,
 		AttachStdin: true,
 		Tty:		 true,
@@ -116,16 +102,16 @@ func containerCreateNoPullFallback(cli *client.Client) (container.CreateResponse
         WorkingDir: pwd,
 	}
 
-    if len(config.Config.UserConfig.Entrypoint) != 0 {
-        ContainerConfig.Entrypoint = config.Config.UserConfig.Entrypoint
+    if len(cli.Config.UserConfig.Entrypoint) != 0 {
+        ContainerConfig.Entrypoint = cli.Config.UserConfig.Entrypoint
     }
 
-    if len(config.Config.UserConfig.Cmd) != 0 {
-        ContainerConfig.Cmd = config.Config.UserConfig.Cmd
+    if len(cli.Config.UserConfig.Cmd) != 0 {
+        ContainerConfig.Cmd = cli.Config.UserConfig.Cmd
     }
 
-    if len(config.Config.UserConfig.Env) != 0 {
-        ContainerConfig.Env = append(ContainerConfig.Env, config.Config.UserConfig.Env...)
+    if len(cli.Config.UserConfig.Env) != 0 {
+        ContainerConfig.Env = append(ContainerConfig.Env, cli.Config.UserConfig.Env...)
     }
     ContainerConfig.Env = append(ContainerConfig.Env, os.Environ()...)
 
@@ -137,11 +123,11 @@ func containerCreateNoPullFallback(cli *client.Client) (container.CreateResponse
 		AutoRemove: true,
 	}
 
-    if err := setupMounts(HostConfig); err != nil {
+    if err := setupMounts(cli, HostConfig); err != nil {
         return nilReturn, err
     }
 
-	return cli.ContainerCreate(
+	return cli.Client.ContainerCreate(
 		context.Background(),
 		ContainerConfig,
 		HostConfig,
@@ -151,9 +137,9 @@ func containerCreateNoPullFallback(cli *client.Client) (container.CreateResponse
 		);
 }
 
-func setupMounts(hostConfig *container.HostConfig) error {
+func setupMounts(cli *cli.Cli, hostConfig *container.HostConfig) error {
     // Check the home dir exists before mounting it
-    _, err := os.Stat(USER.HomeDir)
+    _, err := os.Stat(cli.CurrentUser.HomeDir)
     if os.IsNotExist(err) {
         return fmt.Errorf("Homedir does not exist.")
     }
@@ -161,12 +147,12 @@ func setupMounts(hostConfig *container.HostConfig) error {
         hostConfig.Mounts,
         mount.Mount{
             Type:   mount.TypeBind,
-            Source: USER.HomeDir,
-            Target: USER.HomeDir,
+            Source: cli.CurrentUser.HomeDir,
+            Target: cli.CurrentUser.HomeDir,
         },
     )
 
-    for _, rawVolume := range config.Config.AdditionalVolumes {
+    for _, rawVolume := range cli.Config.AdditionalVolumes {
 		splits := strings.Split(rawVolume, ":")
 		localPath, containerPath := splits[0], splits[1]
 		hostConfig.Mounts = append(
@@ -179,7 +165,7 @@ func setupMounts(hostConfig *container.HostConfig) error {
 		)
 	}
 
-    for _, rawVolume := range config.Config.UserConfig.HomeVolumes {
+    for _, rawVolume := range cli.Config.UserConfig.HomeVolumes {
 		splits := strings.Split(rawVolume, ":")
 		localPath, containerPath := splits[0], splits[1]
         if err := validateHomeMount(localPath); err != nil {
@@ -188,8 +174,8 @@ func setupMounts(hostConfig *container.HostConfig) error {
         if err := validateHomeMount(containerPath); err != nil {
             return fmt.Errorf("Home volume is not valid '%s': %s",rawVolume, err)
         }
-        localPath = fmt.Sprintf("%s/%s", USER.HomeDir, localPath)
-        containerPath = fmt.Sprintf("%s/%s", USER.HomeDir, containerPath)
+        localPath = fmt.Sprintf("%s/%s", cli.CurrentUser.HomeDir, localPath)
+        containerPath = fmt.Sprintf("%s/%s", cli.CurrentUser.HomeDir, containerPath)
 		hostConfig.Mounts = append(
 			hostConfig.Mounts,
 			mount.Mount{
@@ -217,11 +203,11 @@ func validateHomeMount(mount string) error {
     return nil
 }
 
-func pullImage(cli *client.Client) error {
-	log.Info("Pulling image");
-	_, err := cli.ImagePull(
+func pullImage(cli *cli.Cli) error {
+	logrus.Info("Pulling image");
+	_, err := cli.Client.ImagePull(
 		context.Background(),
-		config.Config.Image,
+		cli.Config.Image,
 		types.ImagePullOptions{},
 	)
 	if err != nil {
@@ -259,8 +245,7 @@ func containerAttach(cli *client.Client, cont *container.CreateResponse) error {
 
     err = cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
     if err != nil {
-        log.Errorf("Error Starting container (%s): %s", cont.ID, err)
-        exit(1)
+        return fmt.Errorf("Error Starting container (%s): %s", cont.ID, err)
     }
 
 	fd := int(os.Stdin.Fd())
@@ -268,8 +253,7 @@ func containerAttach(cli *client.Client, cont *container.CreateResponse) error {
 	if terminal.IsTerminal(fd) {
 		oldState, err = terminal.MakeRaw(fd)
 		if err != nil {
-			log.Error("Terminal: make raw ERROR")
-            exit(1)
+			return fmt.Errorf("Terminal: make raw ERROR")
 		}
 
         go func () {
@@ -318,13 +302,13 @@ func containerAttach(cli *client.Client, cont *container.CreateResponse) error {
 	case <-statusCh:
 	}
 
-	log.Debug("Restoring terminal");
+	logrus.Debug("Restoring terminal");
 	if terminal.IsTerminal(fd) {
 		terminal.Restore(fd, oldState)
 	}
 	fmt.Println("");
 
-	log.Debug("Ensuring Container Removal: " + cont.ID);
+	logrus.Debug("Ensuring Container Removal: " + cont.ID);
 	cli.ContainerRemove( context.Background(), cont.ID, types.ContainerRemoveOptions{
 		Force: true,
 	} )
@@ -341,7 +325,7 @@ func execInContainer(cli *client.Client, cont *container.CreateResponse, cmd []s
     }
     execResponse, err := cli.ContainerExecCreate(context.Background(), cont.ID, execConfig)
     if err != nil {
-        log.Debugf("ContainerExecCreateResponse: %v", execResponse)
+        logrus.Debugf("ContainerExecCreateResponse: %v", execResponse)
         return err
     }
     execAttachConfig := types.ExecStartCheck{
@@ -349,7 +333,7 @@ func execInContainer(cli *client.Client, cont *container.CreateResponse, cmd []s
     }
     resp, err := cli.ContainerExecAttach(context.Background(), execResponse.ID, execAttachConfig)
     if err != nil {
-        log.Debugf("ContainerExecAttachResponse: %v", resp)
+        logrus.Debugf("ContainerExecAttachResponse: %v", resp)
         return err
     }
     return nil

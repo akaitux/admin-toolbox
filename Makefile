@@ -9,8 +9,8 @@ run-suid:
 		rm -f ${ROOT_DIR}/main
 	}
 	trap teardown EXIT
-	go build -ldflags="-X 'main.ConfDir=${ROOT_DIR}'" ${ROOT_DIR}/main.go
+	go build -ldflags="-X 'main.DefaultConfDir=${ROOT_DIR}'" ${ROOT_DIR}/cmd/admin_toolbox/main.go
 	chmod +x ${ROOT_DIR}/main
 	sudo chown root:root ${ROOT_DIR}/main
 	sudo chmod u+s ${ROOT_DIR}/main
-	${ROOT_DIR}/main -c ${ROOT_DIR}/user_config.yaml -d
+	${ROOT_DIR}/main -c ${ROOT_DIR}/user_config.yaml -d run

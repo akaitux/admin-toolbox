@@ -4,6 +4,9 @@ import (
     "os"
     "os/user"
     "errors"
+    "path/filepath"
+    "strings"
+    "admin-toolbox/workdir"
 	"gopkg.in/yaml.v3"
     log "github.com/sirupsen/logrus"
     "dario.cat/mergo"
@@ -15,7 +18,7 @@ type SSHAgent struct {
 }
 
 
-type TUserConfig struct {
+type UserConfig struct {
     Cmd                     []string            `yaml:"cmd"`
     Entrypoint              []string            `yaml:"entrypoint"`
     Env                     []string            `yaml:"env"`
@@ -24,27 +27,27 @@ type TUserConfig struct {
 }
 
 
-type TConfig struct {
+type Config struct {
     Name                    string
-    AppVersion              string
-    BuildDate               string
-    ConfDir                 string
-    Workdir                 string
+    DefaultConfDir          string
+    Workdir                 workdir.Workdir
 
     Image                   string              `yaml:"image"`
     AdditionalVolumes       []string            `yaml:"additional_volumes"`
 
-    UserConfig              TUserConfig         `yaml:"user_config"`
+    UserConfig              UserConfig         `yaml:"user_config"`
 }
 
 
-func (config *TConfig) Load(filepath string) error {
-    defaultConfPath := config.ConfDir + "/default.yaml"
+func (config *Config) Init(defaultConfDir string, fpath string, usr *user.User) error {
+    var err error
 
-    usr, err := user.Current()
-    if err != nil {
-        return err
-    }
+    config.DefaultConfDir = defaultConfDir
+
+    defaultConfPath := config.DefaultConfDir + "/default.yaml"
+
+    basename := filepath.Base(fpath)
+    config.Name = strings.TrimSuffix(basename, filepath.Ext(basename))
 
     isDefaultConfExists := true
     if _, err := os.Stat(defaultConfPath); errors.Is(err, os.ErrNotExist) {
@@ -54,7 +57,7 @@ func (config *TConfig) Load(filepath string) error {
     if usr.Uid == "0" || isDefaultConfExists == false {
         // If user is root or default config doesn't exists - just load config as main config
         log.Debugf("Load config without default.conf")
-        configData, err := os.ReadFile(filepath)
+        configData, err := os.ReadFile(fpath)
         if err != nil {
             return err
         }
@@ -74,11 +77,11 @@ func (config *TConfig) Load(filepath string) error {
         return err
     }
 
-    userConfigData, err := os.ReadFile(filepath)
+    userConfigData, err := os.ReadFile(fpath)
     if err != nil {
         return err
     }
-    userConfig := TUserConfig{}
+    userConfig := UserConfig{}
     if err := yaml.Unmarshal(userConfigData, &userConfig); err != nil {
         return err
     }
@@ -88,6 +91,4 @@ func (config *TConfig) Load(filepath string) error {
     }
     return nil
 }
-
-var Config TConfig;
 
