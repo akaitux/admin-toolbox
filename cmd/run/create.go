@@ -84,6 +84,7 @@ func containerCreateNoPullFallback(cli *cli.Cli) (container.CreateResponse, erro
 	}
 
 	ContainerConfig := &container.Config{
+        Hostname:     cli.Config.Name,
 		User:         fmt.Sprintf("%s:%s", usr.Uid, usr.Gid),
 		Image:        cli.Config.Image,
 		AttachStderr: true,
