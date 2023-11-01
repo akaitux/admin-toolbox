@@ -1,7 +1,7 @@
 package run
 
 import (
-	"admin-toolbox/cmd/cli"
+	"admin-toolbox/cmd/atCli"
 	"context"
 	"fmt"
 	"os"
@@ -14,7 +14,7 @@ import (
 )
 
 
-func pullImage(ctx context.Context, cli *cli.Cli) error {
+func pullImage(ctx context.Context, cli *atCli.Cli) error {
 	logrus.Info("Pulling image...")
 	_, err := cli.Client.ImagePull(
         ctx,
@@ -36,7 +36,7 @@ func pullImage(ctx context.Context, cli *cli.Cli) error {
 
 
 
-func containerCreate(ctx context.Context, cli *cli.Cli) (container.CreateResponse, error) {
+func containerCreate(ctx context.Context, cli *atCli.Cli) (container.CreateResponse, error) {
 	nilReturn := container.CreateResponse{}
 
 	if cli.Config.Image == "" {
@@ -64,7 +64,7 @@ func containerCreate(ctx context.Context, cli *cli.Cli) (container.CreateRespons
 	return cont, err
 }
 
-func containerCreateNoPullFallback(cli *cli.Cli) (container.CreateResponse, error) {
+func containerCreateNoPullFallback(cli *atCli.Cli) (container.CreateResponse, error) {
 	nilReturn := container.CreateResponse{}
 
 	usr := cli.CurrentUser
@@ -151,7 +151,7 @@ func contains(s []string, e string) bool {
     return false
 }
 
-func setupMounts(cli *cli.Cli, hostConfig *container.HostConfig) error {
+func setupMounts(cli *atCli.Cli, hostConfig *container.HostConfig) error {
 	// Check the home dir exists before mounting it
 	_, err := os.Stat(cli.CurrentUser.HomeDir)
 	if os.IsNotExist(err) {

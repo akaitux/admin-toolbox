@@ -7,7 +7,7 @@ import (
 	gosignal "os/signal"
 	"time"
 
-	"admin-toolbox/cmd/cli"
+	"admin-toolbox/cmd/atCli"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/moby/sys/signal"
@@ -39,13 +39,13 @@ func resizeTtyTo(ctx context.Context, client client.ContainerAPIClient, id strin
 }
 
 // resizeTty is to resize the tty with cli out's tty size
-func resizeTty(ctx context.Context, cli *cli.Cli, id string, isExec bool) error {
+func resizeTty(ctx context.Context, cli *atCli.Cli, id string, isExec bool) error {
 	height, width := cli.Out().GetTtySize()
 	return resizeTtyTo(ctx, cli.Client, id, height, width, isExec)
 }
 
 // initTtySize is to init the tty's size to the same as the window, if there is an error, it will retry 10 times.
-func initTtySize(ctx context.Context, cli *cli.Cli, id string, isExec bool, resizeTtyFunc func(ctx context.Context, cli *cli.Cli, id string, isExec bool) error) {
+func initTtySize(ctx context.Context, cli *atCli.Cli, id string, isExec bool, resizeTtyFunc func(ctx context.Context, cli *atCli.Cli, id string, isExec bool) error) {
 	rttyFunc := resizeTtyFunc
 	if rttyFunc == nil {
 		rttyFunc = resizeTty
@@ -67,7 +67,7 @@ func initTtySize(ctx context.Context, cli *cli.Cli, id string, isExec bool, resi
 }
 
 // MonitorTtySize updates the container tty size when the terminal tty changes size
-func MonitorTtySize(ctx context.Context, cli *cli.Cli, id string, isExec bool) error {
+func MonitorTtySize(ctx context.Context, cli *atCli.Cli, id string, isExec bool) error {
 	initTtySize(ctx, cli, id, isExec, resizeTty)
 	sigchan := make(chan os.Signal, 1)
 	gosignal.Notify(sigchan, signal.SIGWINCH)

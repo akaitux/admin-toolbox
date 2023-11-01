@@ -1,4 +1,4 @@
-package cli
+package atCli
 
 import (
 	"admin-toolbox/config"
@@ -14,23 +14,25 @@ import (
 )
 
 type CliArgs struct {
-	ShowVersion bool
-	LogDebug    bool
-	ConfPath    string
+	ShowVersion         bool
+	LogDebug            bool
+	ConfPath            string
+	DefaultRootProfile string
 }
 
 type Cli struct {
-	Version        string
-	Commit         string
-	DefaultConfDir string
-	Config         config.Config
-	CurrentUser    *user.User
-	Workdir        workdir.Workdir
-	Args           *CliArgs
-	Client         *client.Client
-	in             *streams.In
-	out            *streams.Out
-	err            io.Writer
+	Version                 string
+	Commit                  string
+	DefaultConfDir          string
+	DefaultRootProfile      string
+	Config                  config.Config
+	CurrentUser             *user.User
+	Workdir                 workdir.Workdir
+	Args                    *CliArgs
+	Client                  *client.Client
+	in                      *streams.In
+	out                     *streams.Out
+	err                     io.Writer
 }
 
 func (cli *Cli) Init() error {
@@ -57,7 +59,10 @@ func (cli *Cli) Init() error {
 	}
 
 	logrus.Debugf("DefaultConfDir: %s", cli.DefaultConfDir)
-	err = cli.Config.Init(cli.DefaultConfDir, cli.Args.ConfPath, cli.CurrentUser)
+
+    cli.DefaultRootProfile = cli.Args.DefaultRootProfile
+
+	err = cli.Config.Init(cli.DefaultConfDir, cli.DefaultRootProfile, cli.Args.ConfPath, cli.CurrentUser)
 	if err != nil {
 		logrus.Errorf("Error while read config file '%s': %s", cli.Args.ConfPath, err)
 		os.Exit(1)

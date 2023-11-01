@@ -1,7 +1,7 @@
 package run
 
 import (
-	"admin-toolbox/cmd/cli"
+	"admin-toolbox/cmd/atCli"
 	"admin-toolbox/streams"
 	"context"
 	"fmt"
@@ -19,7 +19,7 @@ var CONTAINER_NAME string
 var OPTIONS runOptions
 var DETACH_KEYS = "ctrl-e,e"
 
-func run(cli *cli.Cli, options runOptions) error {
+func run(cli *atCli.Cli, options runOptions) error {
 	CONTAINER_NAME = createContainerName(cli)
 	OPTIONS = options
 
@@ -81,7 +81,7 @@ func run(cli *cli.Cli, options runOptions) error {
 	return nil
 }
 
-func createContainerName(cli *cli.Cli) string {
+func createContainerName(cli *atCli.Cli) string {
 
 	t := time.Now()
 	return fmt.Sprintf(
@@ -108,7 +108,7 @@ func validateHomeMount(mount string) error {
 
 func containerAttach(
 	ctx context.Context,
-	cli *cli.Cli,
+	cli *atCli.Cli,
 	cont *container.CreateResponse,
 	errCh *chan error,
 ) (func(), error) {

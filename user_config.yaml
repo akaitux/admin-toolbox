@@ -3,7 +3,7 @@
 
 home_volumes:
   - '.admin-toolbox/ssh:.ssh'
-  - '.admin-toolbox/startup.sh:.startup.sh'
+#  - '.admin-toolbox/startup.sh:.startup.sh'
 
 env:
   - TEST="HEY"

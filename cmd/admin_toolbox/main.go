@@ -1,7 +1,7 @@
 package main
 
 import (
-	"admin-toolbox/cmd/cli"
+	"admin-toolbox/cmd/atCli"
 	"admin-toolbox/cmd/commands"
 	"fmt"
 	"github.com/sirupsen/logrus"
@@ -12,15 +12,15 @@ import (
 var (
 	Version        = "dev"
 	Commit         = ""
-	DefaultConfDir = "/opt/admin-toolbox"
+	DefaultConfDir = "/opt/admin-toolbox/defaults"
 )
 
-func run(rootCli *cli.Cli) error {
+func run(rootCli *atCli.Cli) error {
 	tcmd := newCliCommand(rootCli)
 	return tcmd.Execute()
 }
 
-func newCliCommand(rootCli *cli.Cli) *cobra.Command {
+func newCliCommand(rootCli *atCli.Cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                   "admin-toolbox [OPTIONS] COMMAND [ARG...]",
 		SilenceUsage:          true,
@@ -38,9 +38,14 @@ func newCliCommand(rootCli *cli.Cli) *cobra.Command {
 	cmd.SetOut(rootCli.Out())
 	cmd.SetErr(rootCli.Err())
 
-	args := cli.CliArgs{}
+	args := atCli.CliArgs{}
 
 	cmd.Flags().StringVarP(&args.ConfPath, "config", "c", "", "path to config file")
+	cmd.Flags().StringVarP(
+        &args.DefaultRootProfile,
+        "defaultrootprofile", "p", "",
+        fmt.Sprintf("Name of file from default profiles dir: %s", DefaultConfDir),
+    )
 	cmd.Flags().BoolVarP(&args.LogDebug, "debug", "d", false, "debug log")
 	cmd.Flags().BoolVarP(&args.ShowVersion, "version", "v", false, "version information")
 
@@ -52,7 +57,7 @@ func newCliCommand(rootCli *cli.Cli) *cobra.Command {
 }
 
 func main() {
-	cli, err := cli.NewCli(Version, Commit, DefaultConfDir)
+	cli, err := atCli.NewCli(Version, Commit, DefaultConfDir)
 	if err != nil {
 		logrus.Errorf("Error in setup Cli: %s", err)
 		os.Exit(1)

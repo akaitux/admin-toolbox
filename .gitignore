@@ -20,3 +20,4 @@ main
 
 # Go workspace file
 go.work
+_locals/

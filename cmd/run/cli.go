@@ -1,7 +1,7 @@
 package run
 
 import (
-	"admin-toolbox/cmd/cli"
+	"admin-toolbox/cmd/atCli"
 	"github.com/spf13/cobra"
 )
 
@@ -10,7 +10,7 @@ type runOptions struct {
 	customUid      int
 }
 
-func NewRunCommand(cli *cli.Cli) *cobra.Command {
+func NewRunCommand(cli *atCli.Cli) *cobra.Command {
 	//https://github.com/docker/cli/blob/master/cli/command/container/run.go#L32
 	var options runOptions
 	cmd := &cobra.Command{
