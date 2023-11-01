@@ -1,6 +1,11 @@
 # This file must be used with "source bin/activate" *from bash*
 # you cannot run it directly
 
+
+# WORKDIR_ROOT - path to workdir of env
+# VAULT_LOGIN_METHOD
+# VAULT_LOAD_VAR_<ENV_NAME> = <PATH_INTO_VAULT>:value
+
 if [ "${BASH_SOURCE-}" = "$0" ]; then
     echo "You must source this script: \$ source $0" >&2
     exit 33
@@ -96,59 +101,58 @@ stop_ssh_agent () {
     rm -f $SSH_AGENT_SOCK
 }
 
-deactivate_vault () {
-    <VAULT_DEACTIVATE LOAD_ENV_VARS>
-    if ! [ -z "${_OLD_VAULT_ADDR+_}" ] ; then
-        VAULT_ADDR="$_OLD_VAULT_ADDR"
-        export VAULT_ADDR
-        unset _OLD_VAULT_ADDR
-    fi
-    if ! [ -z "${_OLD_VAULT_TOKEN+_}" ] ; then
-        VAULT_TOKEN="$_OLD_VAULT_TOKEN"
-        export VAULT_TOKEN
-        unset _OLD_VAULT_TOKEN
-    fi
-}
-
 activate_vault () {
-    _OLD_VAULT_ADDR="$VAULT_ADDR"
-    VAULT_ADDR="<VAULT_ADDR>"
-    local VAULT_IS_LOAD_ENV_VARS="<VAULT_IS_LOAD_ENV_VARS>"
-    VAULT_LOGIN_METHOD="<VAULT_LOGIN_METHOD>"
-
-    _OLD_VAULT_TOKEN="$VAULT_TOKEN"
     VAULT_TOKEN=""
     if [ -f "$WORKDIR_ROOT/vault_token" ]; then
-        VAULT_TOKEN="$(cat $WORKDIR_ROOT/vault_token)"
+        VAULT_TOKEN="$(cat $WORKDIR_ROOT/.vault_token)"
     fi
-
-    export VAULT_ADDR
-    export VAULT_TOKEN
-    export VAULT_LOGIN_METHOD
 
     vault_login='
     f(){
-        VAULT_TOKEN=$(vault login -method=$VAULT_LOGIN_METHOD -token-only username=$1)
-        echo -n "$VAULT_TOKEN" > $WORKDIR_ROOT/vault_token;
-        export VAULT_TOKEN
-        unset -f f
+        VAULT_TOKEN=$(vault login -method=${VAULT_LOGIN_METHOD:-ldap} -token-only username=$1);
+        echo -n "$VAULT_TOKEN" > $WORKDIR_ROOT/.vault_token;
+        export VAULT_TOKEN;
+        unset -f f;
     };
     f'
     alias vault-login="$vault_login"
 
-    alias vault-logout='rm -f <WORKDIR_ROOT>/vault_token; unset VAULT_TOKEN'
+    alias vault-logout='rm -f $WORKDIR_ROOT/.vault_token; unset VAULT_TOKEN'
 
-    if [ "$VAULT_IS_LOAD_ENV_VARS" ]; then
-        is_loggedin=$(vault token lookup >/dev/null 2>&1 ; echo $?)
-        if [ "$is_loggedin" != "0" ]; then
-            echo "Login into vault"
-            printf "Enter vault username: "
-            read _vault_user
-            eval $vault_login $_vault_user
+    is_token_loaded="false"
+
+    while IFS='=' read -r name value ; do
+        if [ "$is_token_loaded" = "false" ]; then
+            is_loggedin=$(vault token lookup >/dev/null 2>&1 ; echo $?)
+            if [ "$is_loggedin" != "0" ]; then
+                echo "Login into vault"
+                printf "Enter vault username: "
+                read _vault_user
+                eval $vault_login $_vault_user
+                is_loggedin=$(vault token lookup >/dev/null 2>&1 ; echo $?)
+                if [ "$is_loggedin" != "0" ]; then
+                    break
+                fi
+                is_token_loaded="true"
+            fi
         fi
-    <VAULT_LOAD_ENV_VARS>
-    fi
-
+        prefix="VAULT_LOAD_VAR" # delete longest match from back (everything after first _)
+        if [[ "$name" != "$prefix"* ]]; then
+            continue
+        fi
+        var_name=${name#"${prefix}_"}
+        vault_path=$(echo -n $value | cut -d "^" -f1)
+        vault_key=$(echo -n $value | cut -d "^" -f2)
+        set +e
+        vault_value=$( vault kv get -field=$vault_key $vault_path )
+        if [ "$?" != "0" ]; then
+            echo "Error while load vault variable $name=$value"
+            continue
+        fi
+        set -e
+        command="$var_name=$vault_value"
+        export "$command"
+    done < <(env)
 }
 
 activate_ssh () {
@@ -164,22 +168,6 @@ activate_ssh () {
     if [ "$SSH_ENABLE_AUTOCOMPLETE_FROM_ANSIBLE" ]; then
         ssh_ansible_autocomplete
     fi
-}
-
-activate_gcloud () {
-    local GCLOUD_ENABLED="<GCLOUD_ENABLED>"
-    if [ -z "$GCLOUD_ENABLED"]; then
-        return
-    fi
-
-    _OLD_CLOUDSDK_CONFIG="$CLOUDSDK_CONFIG"
-
-    CLOUDSDK_CONFIG="<GCLOUD_CFG_PATH>"
-    export CLOUDSDK_CONFIG
-
-    _OLD_GOOGLE_APPLICATION_CREDENTIALS="$GOOGLE_APPLICATION_CREDENTIALS"
-    GOOGLE_APPLICATION_CREDENTIALS="$CLOUDSDK_CONFIG/application_default_credentials.json"
-    export GOOGLE_APPLICATION_CREDENTIALS
 }
 
 # unset irrelevant variables
