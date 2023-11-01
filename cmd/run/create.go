@@ -84,7 +84,7 @@ func containerCreateNoPullFallback(cli *atCli.Cli) (container.CreateResponse, er
 	}
 
 	ContainerConfig := &container.Config{
-        Hostname:     cli.Config.Name,
+        Hostname:     fmt.Sprintf("at!%s", cli.Config.Name),
 		User:         fmt.Sprintf("%s:%s", usr.Uid, usr.Gid),
 		Image:        cli.Config.Image,
 		AttachStderr: true,
@@ -194,6 +194,7 @@ func setupMounts(cli *atCli.Cli, hostConfig *container.HostConfig) error {
 	for _, rawVolume := range cli.Config.AdditionalVolumes {
 		splits := strings.Split(rawVolume, ":")
 		localPath, containerPath := splits[0], splits[1]
+        localPath = renderLocalPathVolume(localPath, cli)
         if !contains(containerMountPaths, containerPath) {
             hostConfig.Mounts = append(
                 hostConfig.Mounts,
@@ -210,5 +211,11 @@ func setupMounts(cli *atCli.Cli, hostConfig *container.HostConfig) error {
 	}
 
 	return nil
+}
+
+func renderLocalPathVolume(localPath string, cli *atCli.Cli) string {
+    rendered := localPath
+    rendered = strings.Replace(rendered, "{{conf_dir}}", cli.Config.ConfDir(), 1)
+    return rendered
 }
 

@@ -34,8 +34,10 @@ type Config struct {
 	AdditionalVolumes   []string `yaml:"additional_volumes"`
     InheritEnv          bool     `yaml:"inherit_env"`
     InheritEnvExclude   []string `yaml:"inherit_env_exclude"`
+    ConfPath            string
+    UserConfPath        string
 
-	UserConfig UserConfig `yaml:"user_config"`
+	UserConfig          UserConfig `yaml:"user_config"`
 }
 
 func (config *Config) Init(
@@ -64,6 +66,9 @@ func (config *Config) Init(
 	if usr.Uid == "0" || isDefaultConfExists == false {
 		// If user is root or default config doesn't exists - just load config as main config
 		log.Debugf("Load config without default configs")
+
+        config.ConfPath = fpath
+
 		configData, err := os.ReadFile(fpath)
 		if err != nil {
 			return err
@@ -91,6 +96,8 @@ func (config *Config) Init(
 	if err := yaml.Unmarshal(defaultConfig, config); err != nil {
 		return err
 	}
+    config.ConfPath = defaultConfPath
+    config.UserConfPath = fpath
 
 	userConfigData, err := os.ReadFile(fpath)
 	if err != nil {
@@ -106,3 +113,8 @@ func (config *Config) Init(
 	}
 	return nil
 }
+
+func (config *Config) ConfDir() string {
+    return filepath.Dir(config.ConfPath)
+}
+
