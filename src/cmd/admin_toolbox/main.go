@@ -15,28 +15,40 @@ var (
 	DefaultConfDir = "/opt/admin-toolbox/defaults"
 )
 
-func run(rootCli *atCli.Cli) error {
-	tcmd := newCliCommand(rootCli)
+func run(cli *atCli.Cli) error {
+	tcmd := newCliCommand(cli)
 	return tcmd.Execute()
 }
 
-func newCliCommand(rootCli *atCli.Cli) *cobra.Command {
+func newCliCommand(cli *atCli.Cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                   "admin-toolbox [OPTIONS] COMMAND [ARG...]",
 		SilenceUsage:          true,
 		SilenceErrors:         true,
 		TraverseChildren:      true,
-		Version:               fmt.Sprintf("%s, build %s", rootCli.Version, rootCli.Commit),
+		// Version:               rootCli.ShowVersion(),
 		DisableFlagsInUseLine: true,
 		CompletionOptions: cobra.CompletionOptions{
 			DisableDefaultCmd:   false,
 			HiddenDefaultCmd:    true,
 			DisableDescriptions: true,
 		},
+        Run: func(cmd *cobra.Command, args []string) {
+            if cli.Args.ShowVersion {
+                fmt.Println("Version: " + Version)
+                fmt.Println("Commit: " + Commit)
+                fmt.Println("Default config dir: " + DefaultConfDir)
+                os.Exit(0)
+
+            }
+            cmd.Help()
+            os.Exit(0)
+		},
+
 	}
-	cmd.SetIn(rootCli.In())
-	cmd.SetOut(rootCli.Out())
-	cmd.SetErr(rootCli.Err())
+	cmd.SetIn(cli.In())
+	cmd.SetOut(cli.Out())
+	cmd.SetErr(cli.Err())
 
 	args := atCli.CliArgs{}
 
@@ -49,9 +61,9 @@ func newCliCommand(rootCli *atCli.Cli) *cobra.Command {
 	cmd.Flags().BoolVarP(&args.LogDebug, "debug", "d", false, "debug log")
 	cmd.Flags().BoolVarP(&args.ShowVersion, "version", "v", false, "version information")
 
-	rootCli.Args = &args
+	cli.Args = &args
 
-	commands.AddCommands(cmd, rootCli)
+	commands.AddCommands(cmd, cli)
 	return cmd
 
 }

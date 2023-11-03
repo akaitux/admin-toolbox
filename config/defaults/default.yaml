@@ -1,5 +1,4 @@
-#image: "ubuntu:22.04"
-image: "test2"
+image: "ubuntu:22.04"
 additional_volumes:
   - "/etc/passwd:/etc/passwd:ro"
   - "/etc/group:/etc/group:ro"

@@ -4,7 +4,6 @@ import (
 	"admin-toolbox/config"
 	"admin-toolbox/streams"
 	"admin-toolbox/workdir"
-	"fmt"
 	"github.com/docker/docker/client"
 	"github.com/moby/term"
 	"github.com/sirupsen/logrus"
@@ -35,6 +34,7 @@ type Cli struct {
 	err                     io.Writer
 }
 
+
 func (cli *Cli) Init() error {
 	var err error
 
@@ -42,11 +42,6 @@ func (cli *Cli) Init() error {
 		logrus.SetLevel(logrus.DebugLevel)
 	} else {
 		logrus.SetLevel(logrus.InfoLevel)
-	}
-	if cli.Args.ShowVersion {
-		fmt.Println("Version: " + cli.Version)
-		fmt.Println("Commit: " + cli.Commit)
-		os.Exit(0)
 	}
 	if cli.Args.ConfPath == "" {
 		logrus.Error("-c argument required (no config path)")
