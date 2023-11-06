@@ -7,6 +7,10 @@
 # VAULT_LOAD_VAR_<ENV_NAME> = <PATH_INTO_VAULT>:value
 # GITLAB_ADDR - without protocol (for example, gitlab.domain.com)
 
+### GITLAB
+# export TG_GITLAB_USER, TG_GITLAB_PASSWORD
+
+
 TOOLBOX_WORKDIR=$(eval echo -e -n "$TOOLBOX_WORKDIR")
 GITLAB_TOKEN_FILE="${TOOLBOX_WORKDIR}/.gitlab_token"
 VAULT_TOKEN_PATH="$TOOLBOX_WORKDIR/.vault_token"
