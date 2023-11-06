@@ -173,9 +173,9 @@ function get_new_gitlab_token {
 
 
 activate_vault
-#if [ "$GITLAB_ADDR" ]; then
-#    activate_gitlab_token
-#fi
+if [ "$GITLAB_ADDR" ]; then
+    activate_gitlab_token
+fi
 
 #activate_ssh
 
