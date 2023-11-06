@@ -92,13 +92,11 @@ activate_vault () {
         fi
     done < <(env)
 
-    echo "Load VAULT env..."
     if [ "$is_vault_load_vars" != "true" ]; then
         return
     fi
 
     is_loggedin=$(vault token lookup >/dev/null 2>&1 ; echo $?)
-    echo $is_logged_in
     if [ "$is_loggedin" != "0" ]; then
         printf "Enter vault username: "
         read _vault_user
@@ -142,16 +140,22 @@ function activate_gitlab_token {
             echo ">> Error. No access to gitlab by ssh"
         fi
     fi
+    export TG_GITLAB_USER="git"
+    export TG_GITLAB_PASSWORD="$(cat $GITLAB_TOKEN_FILE)"
 }
 
 function test_gitlab_access {
     #param $0 - token
-    curl -s -f -H "PRIVATE-TOKEN: $0" https://$GITLAB_ADDR || echo -n $?
+    curl -s -f -L -H "PRIVATE-TOKEN: $0" https://$GITLAB_ADDR >/dev/null; echo $?
 }
 
 function get_new_gitlab_token {
-    local data=$(ssh git@${GITLAB_ADDR} personal_access_token admin-toolbox-$(date +%s) api,read_api,read_repository,write_repository,read_registry,write_registry 365 || return "1")
+    local data=$(ssh git@${GITLAB_ADDR} personal_access_token admin-toolbox-$(date +%s) api,read_api,read_repository,write_repository,read_registry,write_registry 363 || return "1")
     echo $data | grep "Token:" | awk '{print $2}' > $GITLAB_TOKEN_FILE
+}
+
+function activate_terraform {
+    export TF_PLUGIN_CACHE_DIR="$TOOLBOX_WORKDIR/.terraform.d/plugin-cache"
 }
 
 #activate_ssh () {
@@ -173,6 +177,7 @@ function get_new_gitlab_token {
 
 
 activate_vault
+activate_terraform
 if [ "$GITLAB_ADDR" ]; then
     activate_gitlab_token
 fi
