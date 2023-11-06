@@ -16,21 +16,34 @@ TOOLBOX_WORKDIR=$(eval echo -e -n "$TOOLBOX_WORKDIR")
 GITLAB_TOKEN_FILE="${TOOLBOX_WORKDIR}/.gitlab_token"
 VAULT_TOKEN_PATH="$TOOLBOX_WORKDIR/.vault_token"
 
-ssh_ansible_autocomplete () {
-    hosts=""
-    #if [[ -r ~/.ssh/config ]]; then
-    #    hosts=($hosts $(awk 'match($0, /^Host \s*([^*]\w+)/, a) {s = s a[1] " "} END {print s}' ~/.ssh/config))
-    #fi
-    #if [[ -r ~/.ssh/known_hosts ]]; then
-    #    hosts=($hosts $(awk 'match($0, /^([^|][a-z.0-9]+) /, a) {s = s a[0] " "} END {print s}' ~/.ssh/known_hosts))
-    #fi
-    #hosts=($hosts $(get_hosts_from_ansible))
+ssh_autocomplete () {
+    declare -A hosts
+    if [ -r "~/.ssh/config" ]; then
+        for h in $(cat ~/.ssh/config | grep -Po "^Host \s*\K([^*]\w+)" | tr '\n' ' '); do
+            hosts[$h]="0"
+        done
+    fi
+    #for key in "${!hosts[@]}"; do echo $key; done
+    if [ -r "~/.ssh/known_hosts" ]; then
+        for h in $(cat ~/.ssh/known_hosts | grep -Po "^\K([^|][a-z.0-9]+) " | tr "\n" " "); do
+            hosts[$h]="0"
+        done
+    fi
+    if [ "$SSH_ENABLE_AUTOCOMPLETE_FROM_ANSIBLE" ]; then
+        for h in $(get_hosts_from_ansible); do
+            hosts[$h]="0"
+        done
+    fi
+    #for key in "${!hosts[@]}"; do echo $key; done
+
+    hosts_oneline=""
+    #for key in "${!hosts[@]}"; do hosts_oneline="$hosts_oneline $key"; done
     #current_shell=$(ps -o comm= -p $$)
     #if [ "$current_shell" = "zsh" ]; then
-    #    _ssh_autocomplete_zsh "${hosts}"
+    #    _ssh_autocomplete_zsh "${hosts_oneline}"
     #fi
     #if [ "$current_shell" = "bash" ]; then
-    #    _ssh_autocomplete_bash "${hosts[*]}"
+    #    _ssh_autocomplete_bash "${hosts_oneline[*]}"
     #fi
 
 }
@@ -51,12 +64,13 @@ _ssh_autocomplete_bash() {
 }
 
 
-get_hosts_from_ansible () {
-    ansible all --list-hosts | tail -n +2 | awk '{s = s $1 " "} END {print s}'
-}
-
 _ssh_autocomplete_zsh () {
     zstyle ':completion:*:(ssh|scp|sftp):*' hosts $(print "$1")
+}
+
+
+get_hosts_from_ansible () {
+    ansible all --list-hosts | tail -n +2 | awk '{s = s $1 " "} END {print s}'
 }
 
 activate_vault () {
@@ -124,7 +138,7 @@ activate_vault () {
         set -e
         command="$var_name=$vault_value"
         export "$command"
-        export -n "$name"
+        unset "$name"
     done < <(env)
 }
 
@@ -162,13 +176,14 @@ function activate_terraform {
 
 # unset irrelevant variables
 
+if [ -z "$TOOLBOX_WORKDIR" ]; then
+    exit 0
+fi
 
 activate_vault
 activate_terraform
 if [ "$GITLAB_ADDR" ]; then
     activate_gitlab_token
 fi
-if [ "$SSH_ENABLE_AUTOCOMPLETE_FROM_ANSIBLE" ]; then
-        ssh_ansible_autocomplete
-fi
+ssh_autocomplete
 

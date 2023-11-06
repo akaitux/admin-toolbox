@@ -9,7 +9,7 @@ import (
 	"errors"
 	"admin-toolbox/workdir"
 	"dario.cat/mergo"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
 
@@ -65,7 +65,7 @@ func (config *Config) Init(
 
 	if usr.Uid == "0" || isDefaultConfExists == false {
 		// If user is root or default config doesn't exists - just load config as main config
-		log.Debugf("Load config without default configs")
+		logrus.Debugf("Load config without default configs")
 
         config.ConfPath = fpath
 
@@ -79,7 +79,7 @@ func (config *Config) Init(
 		return nil
 	}
 
-	log.Debugf("Load config from defaults")
+	logrus.Debugf("Load config from defaults")
 
     if defaultRootProfile == "" {
         return fmt.Errorf(
@@ -108,7 +108,7 @@ func (config *Config) Init(
 		return err
 	}
 	//config.userConfig = userConfig
-	if err := mergo.Merge(&config.UserConfig, userConfig); err != nil {
+	if err := mergo.Merge(&config.UserConfig, userConfig, mergo.WithOverride); err != nil {
 		return err
 	}
 	return nil
