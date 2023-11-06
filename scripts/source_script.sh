@@ -6,6 +6,7 @@
 # VAULT_LOGIN_METHOD
 # VAULT_LOAD_VAR_<ENV_NAME> = <PATH_INTO_VAULT>:value
 # GITLAB_ADDR - without protocol (for example, gitlab.domain.com)
+# SSH_ENABLE_AUTOCOMPLETE_FROM_ANSIBLE
 
 ### GITLAB
 # export TG_GITLAB_USER, TG_GITLAB_PASSWORD
@@ -16,25 +17,21 @@ GITLAB_TOKEN_FILE="${TOOLBOX_WORKDIR}/.gitlab_token"
 VAULT_TOKEN_PATH="$TOOLBOX_WORKDIR/.vault_token"
 
 ssh_ansible_autocomplete () {
-    SSH_CONFIG="<SSH_CONFIG>"
     hosts=""
-    if [[ -r ~/.ssh/config ]]; then
-        hosts=($hosts $(awk 'match($0, /^Host \s*([^*]\w+)/, a) {s = s a[1] " "} END {print s}' ~/.ssh/config))
-    fi
-    if [[ -r $SSH_CONFIG ]]; then
-        hosts=($hosts $(awk 'match($0, /^Host \s*([^*]\w+)/, a) {s = s a[1] " "} END {print s}' $SSH_CONFIG))
-    fi
-    if [[ -r ~/.ssh/known_hosts ]]; then
-        hosts=($hosts $(awk 'match($0, /^([^|][a-z.0-9]+) /, a) {s = s a[0] " "} END {print s}' ~/.ssh/known_hosts))
-    fi
-    hosts=($hosts $(get_hosts_from_ansible))
-    current_shell=$(ps -o comm= -p $$)
-    if [ "$current_shell" = "zsh" ]; then
-        _ssh_autocomplete_zsh "${hosts}"
-    fi
-    if [ "$current_shell" = "bash" ]; then
-        _ssh_autocomplete_bash "${hosts[*]}"
-    fi
+    #if [[ -r ~/.ssh/config ]]; then
+    #    hosts=($hosts $(awk 'match($0, /^Host \s*([^*]\w+)/, a) {s = s a[1] " "} END {print s}' ~/.ssh/config))
+    #fi
+    #if [[ -r ~/.ssh/known_hosts ]]; then
+    #    hosts=($hosts $(awk 'match($0, /^([^|][a-z.0-9]+) /, a) {s = s a[0] " "} END {print s}' ~/.ssh/known_hosts))
+    #fi
+    #hosts=($hosts $(get_hosts_from_ansible))
+    #current_shell=$(ps -o comm= -p $$)
+    #if [ "$current_shell" = "zsh" ]; then
+    #    _ssh_autocomplete_zsh "${hosts}"
+    #fi
+    #if [ "$current_shell" = "bash" ]; then
+    #    _ssh_autocomplete_bash "${hosts[*]}"
+    #fi
 
 }
 
@@ -162,20 +159,6 @@ function activate_terraform {
     export TF_PLUGIN_CACHE_DIR="$TOOLBOX_WORKDIR/.terraform.d/plugin-cache"
 }
 
-#activate_ssh () {
-#    _OLD_SSH_ALIAS=$(alias ssh 2>/dev/null)
-#    local SSH_ENABLED="<SSH_ENABLED>"
-#    local SSH_ENABLE_AUTOCOMPLETE_FROM_ANSIBLE="<SSH_ENABLE_AUTOCOMPLETE_FROM_ANSIBLE>"
-#
-#    if [ "$SSH_ENABLED" ]; then
-#        alias <SSH_ALIAS>
-#    fi
-#    run_ssh_agent
-#
-#    if [ "$SSH_ENABLE_AUTOCOMPLETE_FROM_ANSIBLE" ]; then
-#        ssh_ansible_autocomplete
-#    fi
-#}
 
 # unset irrelevant variables
 
@@ -185,6 +168,7 @@ activate_terraform
 if [ "$GITLAB_ADDR" ]; then
     activate_gitlab_token
 fi
-
-#activate_ssh
+if [ "$SSH_ENABLE_AUTOCOMPLETE_FROM_ANSIBLE" ]; then
+        ssh_ansible_autocomplete
+fi
 
