@@ -35,7 +35,7 @@ ssh_autocomplete () {
         if [ -f "$cache_file" ] && [ $(stat --format=%Y $cache_file) -le $(( $(date +%s) + $cache_seconds )) ]; then
             while read h; do
                 hosts[$h]="0"
-            done
+            done <$cache_file
         else
             hosts_data=""
             for h in $(get_hosts_from_ansible); do
