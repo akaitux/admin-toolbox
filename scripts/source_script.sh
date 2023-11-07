@@ -6,6 +6,7 @@
 # VAULT_LOGIN_METHOD
 # VAULT_LOAD_VAR_<ENV_NAME> = <PATH_INTO_VAULT>:value
 # GITLAB_ADDR - without protocol (for example, gitlab.domain.com)
+# SSH_AGENT_SOCKET
 # SSH_AUTOCMP_ANSIBLE_ENABLED
 # SSH_AUTOCMP_ANSIBLE_CACHE_ENABLED
 # SSH_AUTOCMP_ANSIBLE_CACHE_TIME - in secs
@@ -188,11 +189,18 @@ function activate_terraform {
     export TF_PLUGIN_CACHE_DIR="$TOOLBOX_WORKDIR/.terraform.d/plugin-cache"
 }
 
+function activate_ssh {
+    if [ "$SSH_AGENT_SOCKET" ]; then
+        export SSH_AUTH_SOCK=$( eval echo -e -n "$SSH_AGENT_SOCKET")
+    fi
+}
+
 
 if [ -z "$TOOLBOX_WORKDIR" ]; then
     exit 0
 fi
 
+activate_ssh
 activate_vault
 activate_terraform
 if [ "$GITLAB_ADDR" ]; then

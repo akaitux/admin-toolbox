@@ -58,6 +58,7 @@ func newCliCommand(cli *atCli.Cli) *cobra.Command {
         "defaultrootprofile", "p", "",
         fmt.Sprintf("Name of file from default profiles dir: %s", DefaultConfDir),
     )
+	cmd.Flags().StringVarP(&args.BecomeUser, "user", "u", "", "run as user in sudo mode")
 	cmd.Flags().BoolVarP(&args.LogDebug, "debug", "d", false, "debug log")
 	cmd.Flags().BoolVarP(&args.ShowVersion, "version", "v", false, "version information")
 

@@ -16,7 +16,8 @@ type CliArgs struct {
 	ShowVersion         bool
 	LogDebug            bool
 	ConfPath            string
-	DefaultRootProfile string
+	DefaultRootProfile  string
+    BecomeUser          string
 }
 
 type Cli struct {
@@ -48,7 +49,22 @@ func (cli *Cli) Init() error {
 		os.Exit(1)
 	}
 
-	cli.CurrentUser, err = user.Current()
+    isRunAsRoot := false
+
+	usr, err := user.Current()
+    if err != nil {
+        return err
+    }
+
+	if usr.Uid == "0" {
+      isRunAsRoot = true
+    }
+
+    if cli.Args.BecomeUser != "" {
+        cli.CurrentUser, err = user.Lookup(cli.Args.BecomeUser)
+    } else {
+	    cli.CurrentUser, err = user.Current()
+    }
 	if err != nil {
 		return err
 	}
@@ -57,7 +73,13 @@ func (cli *Cli) Init() error {
 
     cli.DefaultRootProfile = cli.Args.DefaultRootProfile
 
-	err = cli.Config.Init(cli.DefaultConfDir, cli.DefaultRootProfile, cli.Args.ConfPath, cli.CurrentUser)
+	err = cli.Config.Init(
+        cli.DefaultConfDir,
+        cli.DefaultRootProfile,
+        cli.Args.ConfPath,
+        cli.CurrentUser,
+        isRunAsRoot,
+    )
 	if err != nil {
 		logrus.Errorf("Error while read config file '%s': %s", cli.Args.ConfPath, err)
 		os.Exit(1)

@@ -6,7 +6,6 @@ import (
 	"os/user"
 	"path/filepath"
 	"strings"
-	"errors"
 	"admin-toolbox/workdir"
 	"dario.cat/mergo"
 	"github.com/sirupsen/logrus"
@@ -45,6 +44,7 @@ func (config *Config) Init(
     defaultRootProfile string,
     fpath string,
     usr *user.User,
+    isRunAsRoot bool,
 ) error {
 	var err error
 
@@ -58,12 +58,12 @@ func (config *Config) Init(
 	basename := filepath.Base(fpath)
 	config.Name = strings.TrimSuffix(basename, filepath.Ext(basename))
 
-	isDefaultConfExists := true
-	if _, err := os.Stat(defaultConfDir); errors.Is(err, os.ErrNotExist) {
-		isDefaultConfExists = false
-	}
+	// isDefaultConfExists := true
+	// if _, err := os.Stat(defaultConfDir); errors.Is(err, os.ErrNotExist) {
+	// 	isDefaultConfExists = false
+	// }
 
-	if usr.Uid == "0" || isDefaultConfExists == false {
+	if isRunAsRoot && defaultRootProfile == "" {
 		// If user is root or default config doesn't exists - just load config as main config
 		logrus.Debugf("Load config without default configs")
 
@@ -83,7 +83,7 @@ func (config *Config) Init(
 
     if defaultRootProfile == "" {
         return fmt.Errorf(
-            "No default profile (-p) with filename from '%s', it's needed because it's suid mode",
+            "No default profile (-p) with filename from '%s', needed because binary file in suid mode",
             defaultConfDir,
         )
     }
