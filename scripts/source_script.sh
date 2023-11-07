@@ -7,7 +7,7 @@
 # VAULT_LOAD_VAR_<ENV_NAME> = <PATH_INTO_VAULT>:value
 # GITLAB_ADDR - without protocol (for example, gitlab.domain.com)
 # SSH_AUTOCMP_ANSIBLE_CACHE_ENABLED
-# SSH_AUTOCMP_ANSIBLE_CACHE_TIME
+# SSH_AUTOCMP_ANSIBLE_CACHE_TIME - in secs
 
 ### GITLAB
 # export TG_GITLAB_USER, TG_GITLAB_PASSWORD
@@ -30,7 +30,7 @@ ssh_autocomplete () {
             hosts[$h]="0"
         done
     fi
-    if [ "$SSH_AUTOCMP_ANSIBLE_CACHE_TIME" ]; then
+    if [ "$SSH_AUTOCMP_ANSIBLE_CACHE_ENABLED" ]; then
         local cache_file="$TOOLBOX_WORKDIR/.cache_hosts_autocmp"
         local cache_seconds="${SSH_AUTOCMP_ANSIBLE_CACHE_TIME:-600}"
         if [ -f "$cache_file" ] && [ $(stat --format=%Y $cache_file) -le $(( $(date +%s) + $cache_seconds )) ]; then
