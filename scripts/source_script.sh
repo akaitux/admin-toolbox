@@ -34,17 +34,18 @@ ssh_autocomplete () {
             hosts[$h]="0"
         done
     fi
-    #for key in "${!hosts[@]}"; do echo $key; done
 
     hosts_oneline=""
-    #for key in "${!hosts[@]}"; do hosts_oneline="$hosts_oneline $key"; done
-    #current_shell=$(ps -o comm= -p $$)
-    #if [ "$current_shell" = "zsh" ]; then
-    #    _ssh_autocomplete_zsh "${hosts_oneline}"
-    #fi
-    #if [ "$current_shell" = "bash" ]; then
-    #    _ssh_autocomplete_bash "${hosts_oneline[*]}"
-    #fi
+    current_shell=$(ps -o comm= -p $$)
+    if [ "$current_shell" = "bash" ]; then
+        #for key in "${!hosts[@]}"; do echo $key; done
+        for key in "${!hosts[@]}"; do hosts_oneline="$hosts_oneline $key"; done
+        _ssh_autocomplete_bash "${hosts_oneline[*]}"
+    elif [ "$current_shell" = "zsh" ]; then
+        for key in "${(k)hosts}"; do hosts_oneline="$hosts_oneline $key"; done
+        _ssh_autocomplete_zsh "${hosts_oneline}"
+    fi
+
 
 }
 
