@@ -30,9 +30,21 @@ ssh_autocomplete () {
         done
     fi
     if [ "$SSH_ENABLE_AUTOCOMPLETE_FROM_ANSIBLE" ]; then
-        for h in $(get_hosts_from_ansible); do
-            hosts[$h]="0"
-        done
+        local cache_file="$TOOLBOX_WORKDIR/.cache_hosts_autocmp"
+        local cache_seconds="600"
+        if [ -f "$cache_file" ] && [ $(stat --format=%Y $cache_file) -le $(( $(date +%s) + $cache_seconds )) ]; then
+            while read h; do
+                hosts[$h]="0"
+            done
+        else
+            hosts_data=""
+            for h in $(get_hosts_from_ansible); do
+                hosts[$h]="0"
+                hosts_data+="$h\n"
+            done
+            echo $hosts_data > $cache_file
+
+        fi
     fi
 
     hosts_oneline=""
@@ -68,7 +80,6 @@ _ssh_autocomplete_bash() {
 _ssh_autocomplete_zsh () {
     zstyle ':completion:*:(ssh|scp|sftp):*' hosts $(print "$1")
 }
-
 
 get_hosts_from_ansible () {
     ansible all --list-hosts | tail -n +2 | awk '{s = s $1 " "} END {print s}'
@@ -151,18 +162,19 @@ function activate_gitlab_token {
     is_has_access=$(test_gitlab_access $token)
     if [ "$is_has_access" != "0" ]; then
         get_new_gitlab_token
+        token=$(cat $GITLAB_TOKEN_FILE)
         is_has_access=$(test_gitlab_access $token)
         if [ "$is_has_access" != "0" ]; then
             echo ">> Error. No access to gitlab by ssh"
         fi
     fi
     export TG_GITLAB_USER="git"
-    export TG_GITLAB_PASSWORD="$(cat $GITLAB_TOKEN_FILE)"
+    export TG_GITLAB_PASSWORD="$token"
 }
 
 function test_gitlab_access {
-    #param $0 - token
-    curl -s -f -L -H "PRIVATE-TOKEN: $0" https://$GITLAB_ADDR >/dev/null; echo $?
+    #param $1 - token
+    curl -s -f -L -H "PRIVATE-TOKEN: $1" https://$GITLAB_ADDR/api/v4/user >/dev/null; echo $?
 }
 
 function get_new_gitlab_token {
@@ -174,8 +186,6 @@ function activate_terraform {
     export TF_PLUGIN_CACHE_DIR="$TOOLBOX_WORKDIR/.terraform.d/plugin-cache"
 }
 
-
-# unset irrelevant variables
 
 if [ -z "$TOOLBOX_WORKDIR" ]; then
     exit 0
